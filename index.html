@@ -939,8 +939,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 // Když necháš obě hodnoty prázdné, aplikace běží jen v tomto prohlížeči (bez synchronizace).
 // Údaje lze také zadat přímo v aplikaci v záložce Data (uloží se jen do daného zařízení).
 window.RZT_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://bkpmebqqjkikoabdppyy.supabase.co',
+  supabaseAnonKey: 'sb_publishable_ZoTeO4mroCetu3vh8YeZ-g_wMPaBHis',
 
   center: [49.7812, 14.1672], // centrum Dobříše
   homeZoom: 16,
@@ -1474,7 +1474,7 @@ var Overpass = class {
     this.done = /* @__PURE__ */ new Set();
     this.queue = [];
     this.active = 0;
-    this.maxActive = 2;
+    this.maxActive = 1;
     this.blockedUntil = 0;
     this.ep = 0;
   }
@@ -1529,6 +1529,10 @@ way["highway"]["name"]${box};out tags geom qt;`;
   _pump() {
     while (this.active < this.maxActive && this.queue.length) {
       const job = this.queue.shift();
+      if (Date.now() < (this.downUntil || 0)) {
+        job.reject(this.downErr || new Error("Overpass nen\xED dostupn\xFD"));
+        continue;
+      }
       this.active++;
       this.query(job.query).then(job.resolve, job.reject).finally(() => {
         this.active--;
@@ -1537,12 +1541,16 @@ way["highway"]["name"]${box};out tags geom qt;`;
     }
   }
   cancelQueued() {
-    for (const j of this.queue.splice(0)) j.reject(Object.assign(new Error("zru\u0161eno"), { cancelled: true }));
+    const keep = this.queue.filter((j) => j.query.includes('"place"'));
+    this.queue = this.queue.filter((j) => !j.query.includes('"place"'));
+    const drop = this.queue;
+    this.queue = keep;
+    for (const j of drop) j.reject(Object.assign(new Error("zru\u0161eno"), { cancelled: true }));
   }
   // Jeden dotaz; při přetížení (429/504) počká a zkusí další server.
   async query(query) {
     let lastErr;
-    for (let attempt = 0; attempt < this.endpoints.length; attempt++) {
+    for (let attempt = 0; attempt < this.endpoints.length + 1; attempt++) {
       const wait = this.blockedUntil - Date.now();
       if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       const url = this.endpoints[this.ep % this.endpoints.length];
@@ -1552,7 +1560,7 @@ way["highway"]["name"]${box};out tags geom qt;`;
         const res = await this.fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ctl.signal });
         clearTimeout(timer);
         if (res.status === 429 || res.status === 504 || res.status === 503) {
-          this.blockedUntil = Date.now() + 1200 * (attempt + 1);
+          this.blockedUntil = Date.now() + 1500 * (attempt + 1);
           this.ep++;
           lastErr = new Error("Overpass je p\u0159et\xED\u017Een\xFD (" + res.status + ")");
           continue;
@@ -1562,10 +1570,12 @@ way["highway"]["name"]${box};out tags geom qt;`;
         if (json.remark && /timed out|out of memory/i.test(json.remark)) throw new Error("Overpass: " + json.remark);
         return json;
       } catch (e) {
-        lastErr = e;
+        lastErr = e && e.name === "AbortError" ? new Error("server neodpov\u011Bd\u011Bl v\u010Das") : e;
         this.ep++;
       }
     }
+    this.downUntil = Date.now() + 15e3;
+    this.downErr = lastErr;
     throw lastErr || new Error("Overpass nen\xED dostupn\xFD");
   }
   // Sídla v okruhu – pro filtr obcí a přiřazení budov k obci.
@@ -1573,7 +1583,7 @@ way["highway"]["name"]${box};out tags geom qt;`;
     const c = await this.persist.get("places").catch(() => null);
     if (c && Date.now() - c.t < 30 * 864e5 && c.r === radiusM) return c.data;
     try {
-      const json = await this.query(`[out:json][timeout:25];node["place"~"^(town|village|hamlet)$"]["name"](around:${radiusM},${lat},${lon});out body;`);
+      const json = await this._enqueue(`[out:json][timeout:25];node["place"~"^(town|village|hamlet)$"]["name"](around:${radiusM},${lat},${lon});out body;`);
       const data = json.elements.map((e) => ({ name: e.tags.name, kind: e.tags.place, lat: e.lat, lon: e.lon })).sort((a, b) => a.name.localeCompare(b.name, "cs"));
       this.persist.set("places", { t: Date.now(), r: radiusM, data }).catch(() => {
       });
@@ -2116,7 +2126,7 @@ async function loadView() {
   evict();
   overpass.cancelQueued();
   notice("Na\u010D\xEDt\xE1m budovy\u2026", "load");
-  let failed = 0, stale = false;
+  let failed = 0, stale = false, why = "";
   await Promise.all(tiles.map(async (t) => {
     try {
       const data = await overpass.loadTile(t.x, t.y);
@@ -2125,13 +2135,15 @@ async function loadView() {
     } catch (e) {
       if (!e.cancelled) {
         failed++;
+        why = e && e.message || String(e);
         console.warn("[overpass]", e);
       }
     }
   }));
   if (seq !== loadSeq) return;
-  if (failed) notice("Budovy se nepoda\u0159ilo na\u010D\xEDst \u2013 Overpass API te\u010F neodpov\xEDd\xE1. Tvoje evidence z\u016Fst\xE1v\xE1 zobrazen\xE1.", "err", { label: "Zkusit znovu", fn: () => {
+  if (failed) notice("Budovy se nepoda\u0159ilo na\u010D\xEDst \u2013 Overpass API te\u010F neodpov\xEDd\xE1. Tvoje evidence z\u016Fst\xE1v\xE1 zobrazen\xE1." + (why ? " (" + why.slice(0, 90) + ")" : ""), "err", { label: "Zkusit znovu", fn: () => {
     overpass.blockedUntil = 0;
+    overpass.downUntil = 0;
     loadView();
   } });
   else if (stale) notice("Mapov\xE1 data jsou z ulo\u017Een\xE9 kopie (server neodpov\xEDd\xE1).", "stale");
@@ -3234,7 +3246,6 @@ function loadPlaces() {
     placesBusy = false;
   });
 }
-loadPlaces();
 window.__rzt = { store, map, B, state, overpass };
 </script>
 </body>
