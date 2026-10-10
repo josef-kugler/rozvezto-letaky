@@ -948,6 +948,8 @@ window.RZT_CONFIG = {
 
   // veřejné servery Overpass API – zkouší se postupně, když některý neodpovídá
   overpassEndpoints: [
+    'https://overpass.openstreetmap.fr/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
     'https://overpass-api.de/api/interpreter',
     'https://overpass.private.coffee/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter'
@@ -1018,20 +1020,59 @@ var IdbPersist = class {
           rq.result.createObjectStore("rows");
           rq.result.createObjectStore("kv");
         };
-        rq.onsuccess = () => res(rq.result);
-        rq.onerror = () => rej(rq.error);
+        rq.onsuccess = () => {
+          const db = rq.result;
+          db.onclose = () => {
+            if (this.db === db) {
+              this.dbp = null;
+              this.db = null;
+            }
+          };
+          db.onversionchange = () => {
+            db.close();
+            if (this.db === db) {
+              this.dbp = null;
+              this.db = null;
+            }
+          };
+          this.db = db;
+          res(db);
+        };
+        rq.onerror = () => {
+          this.dbp = null;
+          rej(rq.error);
+        };
+        rq.onblocked = () => {
+          this.dbp = null;
+          rej(new Error("\xDAlo\u017Ei\u0161t\u011B je zablokovan\xE9 jinou z\xE1lo\u017Ekou"));
+        };
       });
     }
     return this.dbp;
   }
-  async tx(store2, mode, fn) {
-    const db = await this.open();
-    return new Promise((res, rej) => {
-      const t = db.transaction(store2, mode);
-      const rq = fn(t.objectStore(store2));
-      t.oncomplete = () => res(rq && rq.result);
-      t.onerror = t.onabort = () => rej(t.error);
-    });
+  reset() {
+    try {
+      if (this.db) this.db.close();
+    } catch (e) {
+    }
+    this.dbp = null;
+    this.db = null;
+  }
+  async tx(store2, mode, fn, attempt = 0) {
+    try {
+      const db = await this.open();
+      return await new Promise((res, rej) => {
+        const t = db.transaction(store2, mode);
+        const rq = fn(t.objectStore(store2));
+        t.oncomplete = () => res(rq && rq.result);
+        t.onerror = t.onabort = () => rej(t.error || new Error("Z\xE1pis do \xFAlo\u017Ei\u0161t\u011B selhal"));
+      });
+    } catch (e) {
+      if (attempt >= 2 || e && e.name === "QuotaExceededError") throw e;
+      this.reset();
+      await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+      return this.tx(store2, mode, fn, attempt + 1);
+    }
   }
   loadRows() {
     return this.tx("rows", "readonly", (s) => s.getAll());
@@ -1570,7 +1611,8 @@ way["highway"]["name"]${box};out tags geom qt;`;
         if (json.remark && /timed out|out of memory/i.test(json.remark)) throw new Error("Overpass: " + json.remark);
         return json;
       } catch (e) {
-        lastErr = e && e.name === "AbortError" ? new Error("server neodpov\u011Bd\u011Bl v\u010Das") : e;
+        console.warn("[overpass]", url, e && e.message);
+        if (!lastErr || !/fetch|load failed/i.test(e && e.message || "")) lastErr = e && e.name === "AbortError" ? new Error("server neodpov\u011Bd\u011Bl v\u010Das") : e;
         this.ep++;
       }
     }
@@ -2067,6 +2109,8 @@ function saveStreet(status) {
 var loadTimer = null;
 var loadSeq = 0;
 var noticeKind = "";
+var autoRetry = 0;
+var autoRetryTimer = null;
 function notice(text, kind = "", action = null) {
   const el = $("#notice");
   noticeKind = kind;
@@ -2141,18 +2185,36 @@ async function loadView() {
     }
   }));
   if (seq !== loadSeq) return;
-  if (failed) notice("Budovy se nepoda\u0159ilo na\u010D\xEDst \u2013 Overpass API te\u010F neodpov\xEDd\xE1. Tvoje evidence z\u016Fst\xE1v\xE1 zobrazen\xE1." + (why ? " (" + why.slice(0, 90) + ")" : ""), "err", { label: "Zkusit znovu", fn: () => {
-    overpass.blockedUntil = 0;
-    overpass.downUntil = 0;
-    loadView();
-  } });
-  else if (stale) notice("Mapov\xE1 data jsou z ulo\u017Een\xE9 kopie (server neodpov\xEDd\xE1).", "stale");
+  clearTimeout(autoRetryTimer);
+  if (failed) {
+    const again = () => {
+      clearTimeout(autoRetryTimer);
+      overpass.blockedUntil = 0;
+      overpass.downUntil = 0;
+      loadView();
+    };
+    const delay = [8, 20, 45][autoRetry];
+    if (delay) {
+      autoRetry++;
+      notice(`Budovy se nepoda\u0159ilo na\u010D\xEDst, server je p\u0159et\xED\u017Een\xFD. Zkou\u0161\xEDm to znovu za ${delay} s\u2026`, "err", { label: "Zkusit hned", fn: again });
+      autoRetryTimer = setTimeout(again, delay * 1e3);
+    } else notice("Budovy se nepoda\u0159ilo na\u010D\xEDst \u2013 servery s mapov\xFDmi daty te\u010F neodpov\xEDdaj\xED. Tvoje evidence z\u016Fst\xE1v\xE1 zobrazen\xE1." + (why ? " (" + why.slice(0, 90) + ")" : ""), "err", { label: "Zkusit znovu", fn: () => {
+      autoRetry = 0;
+      again();
+    } });
+  } else autoRetry = 0;
+  if (failed) {
+    softRender();
+    return;
+  }
+  if (stale) notice("Mapov\xE1 data jsou z ulo\u017Een\xE9 kopie (server neodpov\xEDd\xE1).", "stale");
   else notice("");
   if (!failed) loadPlaces();
   softRender();
 }
 map.on("moveend", () => {
   clearTimeout(loadTimer);
+  clearTimeout(autoRetryTimer);
   loadTimer = setTimeout(loadView, 350);
 });
 var lastFar = false;
