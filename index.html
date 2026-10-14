@@ -846,21 +846,25 @@ table.cov tr { cursor: pointer; }
   #search input { border-right: 1px solid var(--line); border-radius: 8px; }
   #sync span { display: none; }
   #sync { padding: 0 12px; }
-  #panel { position: fixed; left: 0; right: 0; bottom: 0; height: 58dvh; border-right: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.16); transform: translateY(calc(100% - 74px - var(--safe-b))); transition: transform .22s ease; }
+  #panel { position: fixed; left: 0; right: 0; bottom: 0; height: 58dvh; border-right: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.16); transform: translateY(calc(100% - 82px - var(--safe-b))); transition: transform .22s ease; }
   #panel.open { transform: none; }
-  #panel-handle { display: block; height: 22px; border: 0; background: none; flex: none; }
-  #panel-handle i { display: block; width: 42px; height: 5px; border-radius: 3px; background: #cfcfcf; margin: 0 auto; }
+  #panel-handle { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 4px; height: 38px; padding: 0 14px; border: 0; border-bottom: 1px solid var(--line); background: none; flex: none; color: var(--ink); font-size: 13px; font-weight: 600; touch-action: none; }
+  #panel-handle i { position: absolute; left: 50%; top: 9px; transform: translateX(-50%); width: 42px; height: 5px; border-radius: 3px; background: #cfcfcf; }
+  #panel-handle b { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--red); color: #fff; font-size: 14px; line-height: 1; }
   #tabs button { height: 44px; }
+  #tabs { border-bottom: 1px solid var(--line); }
   #tools { top: 8px; right: 8px; gap: 5px; }
   #tools button { width: 52px; min-height: 46px; }
-  #legend { left: 8px; bottom: calc(96px + var(--safe-b)); flex-wrap: nowrap; overflow-x: auto; max-width: calc(100% - 16px); padding-bottom: 2px; }
+  #legend { left: 8px; bottom: calc(104px + var(--safe-b)); flex-wrap: nowrap; overflow-x: auto; max-width: calc(100% - 16px); padding-bottom: 2px; }
   .chip { flex: none; height: 32px; padding: 0 9px; font-size: 12.5px; }
-  #modebar { top: auto; left: 8px; right: 8px; width: auto; bottom: calc(136px + var(--safe-b)); padding: 10px; }
+  #modebar { top: auto; left: 8px; right: 8px; width: auto; bottom: calc(144px + var(--safe-b)); padding: 10px; }
   #notice { top: 8px; bottom: auto; max-width: calc(100% - 76px); left: 8px; transform: none; text-align: left; }
-  .leaflet-bottom { bottom: calc(74px + var(--safe-b)); }
+  .leaflet-bottom { bottom: calc(82px + var(--safe-b)); }
   .leaflet-top.leaflet-left { display: none; }
   .leaflet-control-scale { display: none; }
 }
+
+.dlg ol { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 8px; }
 </style>
 </head>
 <body>
@@ -899,7 +903,7 @@ table.cov tr { cursor: pointer; }
   </main>
 
   <aside id="panel">
-    <button id="panel-handle" type="button" aria-label="Rozbalit panel"><i></i></button>
+    <button id="panel-handle" type="button" aria-label="Sbalit nebo rozbalit panel" aria-expanded="false"><i></i><b>▴</b><span>Zobrazit panel</span></button>
     <nav id="tabs">
       <button data-tab="stats" class="on">Přehled</button>
       <button data-tab="list">Záznamy</button>
@@ -1077,11 +1081,33 @@ var IdbPersist = class {
   loadRows() {
     return this.tx("rows", "readonly", (s) => s.getAll());
   }
+  // zápisy se sbírají a ukládají jednou transakcí – hromadná změna stovek budov se uloží během okamžiku
   putRow(table, row) {
-    return this.tx("rows", "readwrite", (s) => s.put({ ...row, _t: table }, table + "|" + row.id));
+    return this._q("put", table + "|" + row.id, { ...row, _t: table });
   }
   delRow(table, id) {
-    return this.tx("rows", "readwrite", (s) => s.delete(table + "|" + id));
+    return this._q("del", table + "|" + id);
+  }
+  _q(op, key, val) {
+    return new Promise((res, rej) => {
+      (this.pend || (this.pend = [])).push({ op, key, val, res, rej });
+      if (!this.flushT) this.flushT = setTimeout(() => this._flush(), 0);
+    });
+  }
+  async _flush() {
+    const batch = this.pend || [];
+    this.pend = [];
+    this.flushT = null;
+    if (!batch.length) return;
+    try {
+      await this.tx("rows", "readwrite", (s) => {
+        for (const b of batch) b.op === "put" ? s.put(b.val, b.key) : s.delete(b.key);
+        return null;
+      });
+      batch.forEach((b) => b.res());
+    } catch (e) {
+      batch.forEach((b) => b.rej(e));
+    }
   }
   get(k) {
     return this.tx("kv", "readonly", (s) => s.get(k));
@@ -2008,7 +2034,7 @@ function select(sel, fly = false) {
       const l = areaLayers.get(sel.id);
       if (fly && l) map.fitBounds(l.getBounds(), { maxZoom: 18, padding: [40, 40] });
     }
-    $("#panel").classList.add("open");
+    setPanel(true);
     if (window.innerWidth <= 820 && !fly) {
       const l = sel.type === "building" ? (B.get(sel.id) || {}).layer : areaLayers.get(sel.id);
       const c = l && (l.getBounds ? l.getBounds().getCenter() : l.getLatLng());
@@ -2257,7 +2283,7 @@ function setMode(mode, opts = {}) {
     "on",
     b.dataset.tool === mode || mode === "draw" && (opts.purpose === "area" && b.dataset.tool === "area" || opts.purpose === "manual" && b.dataset.tool === "manual" || opts.purpose === "select" && b.dataset.tool === "select")
   ));
-  if (mode !== "browse") $("#panel").classList.remove("open");
+  if (mode !== "browse") setPanel(false);
   renderModebar();
 }
 function redrawSketch() {
@@ -2375,16 +2401,90 @@ $("#tools").addEventListener("click", (e) => {
   if (!b) return;
   const t = b.dataset.tool;
   if (t === "home") map.setView(CFG.center, CFG.homeZoom);
-  else if (t === "locate") map.locate({ setView: true, maxZoom: 18, enableHighAccuracy: true });
+  else if (t === "locate") locate();
   else if (t === "area") setMode(state.mode === "draw" && state.draw.purpose === "area" ? "browse" : "draw", { purpose: "area" });
   else setMode(state.mode === t ? "browse" : t);
 });
-var meMarker = null;
-map.on("locationfound", (e) => {
-  if (meMarker) meMarker.remove();
-  meMarker = L.circleMarker(e.latlng, { renderer: svgSketch, interactive: false, radius: 8, color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 }).addTo(map);
-});
-map.on("locationerror", () => toast("Polohu se nepoda\u0159ilo zjistit (zkontroluj opr\xE1vn\u011Bn\xED prohl\xED\u017Ee\u010De)."));
+var geoWatch = null;
+var meDot = null;
+var meAcc = null;
+var geoFirst = true;
+var geoHigh = true;
+function geoStop() {
+  if (geoWatch != null) navigator.geolocation.clearWatch(geoWatch);
+  geoWatch = null;
+  if (meDot) {
+    meDot.remove();
+    meDot = null;
+  }
+  if (meAcc) {
+    meAcc.remove();
+    meAcc = null;
+  }
+  document.querySelector('[data-tool="locate"]').classList.remove("on");
+}
+function geoStart() {
+  geoWatch = navigator.geolocation.watchPosition((p) => {
+    const ll = [p.coords.latitude, p.coords.longitude], acc = Math.min(p.coords.accuracy || 0, 2e3);
+    if (!meAcc) meAcc = L.circle(ll, { renderer: svgSketch, interactive: false, radius: acc, color: "#1a73e8", weight: 1, fillColor: "#1a73e8", fillOpacity: 0.1 }).addTo(map);
+    else meAcc.setLatLng(ll).setRadius(acc);
+    if (!meDot) meDot = L.circleMarker(ll, { renderer: svgSketch, interactive: false, radius: 8, color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 }).addTo(map);
+    else meDot.setLatLng(ll);
+    if (geoFirst) {
+      geoFirst = false;
+      map.setView(ll, Math.max(map.getZoom(), 17));
+      toast(acc > 150 ? `Poloha nalezena, ale nep\u0159esn\u011B (\xB1${Math.round(acc)} m).` : "Poloha nalezena.");
+    }
+  }, (err) => {
+    if (err.code === 3 && geoHigh) {
+      geoHigh = false;
+      navigator.geolocation.clearWatch(geoWatch);
+      geoStart();
+      return;
+    }
+    if (err.code !== 1 && !geoFirst) return;
+    geoStop();
+    geoHelp(err.code);
+  }, { enableHighAccuracy: geoHigh, maximumAge: 15e3, timeout: geoHigh ? 15e3 : 3e4 });
+}
+function locate() {
+  if (geoWatch != null) {
+    geoStop();
+    toast("Sledov\xE1n\xED polohy vypnuto.");
+    return;
+  }
+  if (!("geolocation" in navigator)) {
+    toast("Tento prohl\xED\u017Ee\u010D neum\xED zjistit polohu.");
+    return;
+  }
+  if (!window.isSecureContext) {
+    toast("Poloha funguje jen na adrese za\u010D\xEDnaj\xEDc\xED https://");
+    return;
+  }
+  geoFirst = true;
+  geoHigh = true;
+  document.querySelector('[data-tool="locate"]').classList.add("on");
+  toast("Zji\u0161\u0165uji polohu\u2026");
+  geoStart();
+}
+function geoHelp(code) {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  const chromeIos = /CriOS/.test(navigator.userAgent);
+  const steps = code === 1 ? ios ? `<ol>
+          <li>Otev\u0159i <b>Nastaven\xED \u2192 Soukrom\xED a zabezpe\u010Den\xED \u2192 Polohov\xE9 slu\u017Eby</b> a zkontroluj, \u017Ee jsou zapnut\xE9.</li>
+          <li>Ve stejn\xE9m seznamu klepni na <b>${chromeIos ? "Chrome" : "Weby Safari"}</b> a zvol <b>P\u0159i pou\u017E\xEDv\xE1n\xED aplikace</b>${chromeIos ? "" : " a zapni <b>P\u0159esn\xE1 poloha</b>"}.</li>
+          ${chromeIos ? "" : "<li>V Safari klepni v adresn\xEDm \u0159\xE1dku na <b>aA</b> (nebo \u2630) \u2192 <b>Nastaven\xED webu</b> \u2192 <b>Poloha</b> \u2192 <b>Povolit</b>.</li>"}
+          <li>Obnov str\xE1nku a klepni znovu na <b>Poloha</b>.</li>
+        </ol><p class="hint">Aplikaci otev\xEDrej p\u0159\xEDmo v ${chromeIos ? "Chromu" : "Safari"} nebo z ikony na plo\u0161e, ne odkazem uvnit\u0159 jin\xE9 aplikace (Messenger, Claude\u2026), tam b\xFDv\xE1 poloha zak\xE1zan\xE1.</p>` : `<ol><li>Klepni v adresn\xEDm \u0159\xE1dku na ikonu vlevo od adresy \u2192 <b>Poloha</b> \u2192 <b>Povolit</b>.</li><li>Na Macu je\u0161t\u011B zkontroluj <b>Nastaven\xED syst\xE9mu \u2192 Soukrom\xED a zabezpe\u010Den\xED \u2192 Polohov\xE9 slu\u017Eby</b> pro sv\u016Fj prohl\xED\u017Ee\u010D.</li><li>Obnov str\xE1nku a zkus to znovu.</li></ol>` : `<p>Telefon te\u010F polohu nezjistil${code === 3 ? " v\u010Das" : ""}. Zkontroluj, \u017Ee m\xE1\u0161 zapnut\xE9 Polohov\xE9 slu\u017Eby, a zkus to venku nebo za chv\xEDli znovu.</p>`;
+  modal(
+    `<h2>${code === 1 ? "Poloha je zak\xE1zan\xE1" : "Polohu se nepoda\u0159ilo zjistit"}</h2>${code === 1 ? "<p>Prohl\xED\u017Ee\u010D aplikaci nedovolil zjistit polohu. Povol ji takhle:</p>" : ""}${steps}
+    <div class="btns"><button class="btn pri" data-m="again">Zkusit znovu</button><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`,
+    { again: () => {
+      closeModal();
+      locate();
+    }, x: closeModal }
+  );
+}
 function bulkApply(ids, status, flyers, done) {
   if (!ids.length) return;
   const existing = ids.filter((id) => statusOf(id) !== "none" || entrancesOf(id).length);
@@ -2667,11 +2767,35 @@ $("#tabs").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (b) {
     state.tab = b.dataset.tab;
-    $("#panel").classList.add("open");
+    setPanel(true);
     renderPanel();
   }
 });
-$("#panel-handle").addEventListener("click", () => $("#panel").classList.toggle("open"));
+function setPanel(open) {
+  const p = $("#panel");
+  p.classList.toggle("open", open);
+  const h = $("#panel-handle");
+  h.setAttribute("aria-expanded", String(open));
+  h.querySelector("span").textContent = open ? "Sbalit" : "Zobrazit panel";
+  h.querySelector("b").textContent = open ? "\u25BE" : "\u25B4";
+}
+$("#panel-handle").addEventListener("click", () => setPanel(!$("#panel").classList.contains("open")));
+{
+  let y0 = null;
+  $("#panel-handle").addEventListener("touchstart", (e) => {
+    y0 = e.touches[0].clientY;
+  }, { passive: true });
+  $("#panel-handle").addEventListener("touchend", (e) => {
+    if (y0 == null) return;
+    const dy = e.changedTouches[0].clientY - y0;
+    y0 = null;
+    if (Math.abs(dy) > 30) {
+      e.preventDefault();
+      setPanel(dy < 0);
+    }
+  });
+}
+setPanel(false);
 $("#panel-body").addEventListener("click", (e) => {
   const t = e.target.closest("[data-act]");
   if (!t) return;
@@ -2791,7 +2915,7 @@ $("#panel-body").addEventListener("click", (e) => {
         if (g) addBuilding(fromStoreRow(g));
       }
       select({ type: t.dataset.type, id }, true);
-      if (window.innerWidth <= 820) $("#panel").classList.remove("open");
+      if (window.innerWidth <= 820) setPanel(false);
       break;
     }
     case "muni-pick":
@@ -3160,7 +3284,7 @@ $("#sync").addEventListener("click", () => {
   if (session) store.sync();
   select(null);
   state.tab = "data";
-  $("#panel").classList.add("open");
+  setPanel(true);
   renderPanel();
 });
 function describe(table, row) {
