@@ -684,10 +684,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --muted: #6b6b6b;
   --line: #e6e6e9;
   --card: #ffffff;
-  --s-none: #9aa0a6;
-  --s-done: #2e9e4f;
-  --s-partial: #f08c00;
-  --s-revisit: #d7263d;
+  --s-none: #8E8E93;
+  --s-done: #30B651;
+  --s-partial: #FF9500;
+  --s-revisit: #FF3B30;
   --top-h: 76px;
   --rail-w: 168px;
   --panel-w: 348px;
@@ -888,6 +888,83 @@ table.cov tr { cursor: pointer; }
 .bico { pointer-events: none !important; display: grid; place-items: center; }
 .bico svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1px rgba(0,0,0,.35)); }
 
+
+/* ============ Pepův UI styl: Liquid Glass, velká zaoblení ============ */
+:root {
+  --accent: var(--red);
+  --accent-tint: color-mix(in srgb, var(--red) 12%, white);
+  --bg: #F2F2F7; --soft: rgba(118,118,128,.12); --line: rgba(60,60,67,.14);
+  --muted: rgba(60,60,67,.6); --glass: rgba(255,255,255,.62);
+  --field: rgba(60,60,67,.18);
+  --ease: cubic-bezier(.32,.72,0,1);
+}
+.glass, #tools button, .mapbtns .grp, .mapbtns .solo, .chip, #search-results, .dlg {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.75), 0 8px 28px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { :root { --glass: rgba(255,255,255,.95); } }
+@media (prefers-reduced-transparency: reduce) { :root { --glass: #fff; } }
+button { transition: transform .2s var(--ease), background-color .2s, color .2s, box-shadow .2s; }
+button:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) { button, #panel { transition: none !important; } }
+#top { background: rgba(255,255,255,.8); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+#search input { border-radius: 999px; background: var(--soft); border-color: transparent; }
+#search input:focus { background: #fff; }
+#muni, #sync { border-radius: 999px; }
+#sync[data-s=synced] { background: color-mix(in srgb, var(--s-done) 12%, white); border-color: transparent; }
+#tabs button { border-radius: 999px; }
+#tabs button.on { background: var(--accent-tint); color: var(--accent); box-shadow: none; }
+#panel-body { background: var(--bg); }
+.card { border: 0; border-radius: 26px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.card-h h4 { font-size: 17px; }
+.badge { border-radius: 12px; }
+.tbtn { border: 0; background: var(--soft); border-radius: 14px; font-weight: 500; }
+.tbtn:hover { background: rgba(118,118,128,.18); }
+.tbtn.pri { background: var(--accent); }
+.fact { border: 0; background: var(--soft); border-radius: 18px; }
+.lg li { border-radius: 12px; }
+.field input, .field select, .field textarea { border-radius: 12px; border-color: var(--field); }
+.btn { border-radius: 14px; }
+.sbtn { border-radius: 16px; }
+#tools button { border-radius: 22px; }
+#tools button.on { background: var(--accent); border-color: var(--accent); }
+#tools button.track { color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent), 0 8px 28px rgba(0,0,0,.10); }
+.mapbtns .grp, .mapbtns .solo { border-radius: 18px; }
+.mapbtns button { background: transparent; }
+.chip { border-radius: 999px; }
+#modal { background: rgba(0,0,0,.18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.dlg { border-radius: 32px; padding: 24px; --glass: rgba(255,255,255,.86); }
+#notice { border-radius: 999px; padding: 10px 18px; }
+#toast { border-radius: 999px; padding: 11px 18px; background: rgba(28,28,30,.82); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 8px 28px rgba(0,0,0,.2); }
+#toast.act { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 18px; text-align: left; }
+#toast.act span { flex: 1; min-width: 0; }
+#toast.act button { flex: none; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(255,255,255,.16); color: #fff; font-weight: 600; font-size: 13.5px; }
+#toast.act button:first-of-type { background: #fff; color: #000; }
+/* přepínač ve stylu iOS */
+.toggle { position: relative; width: 51px; height: 31px; flex: none; border: 0; border-radius: 999px; background: rgba(120,120,128,.16); padding: 0; }
+.toggle i { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.08); transition: transform .25s var(--ease); }
+.toggle.on { background: var(--s-done); }
+.toggle.on i { transform: translateX(20px); }
+.qrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.qrow + .qrow { border-top: 1px solid var(--line); }
+.qrow > div:first-child { flex: 1; min-width: 0; }
+.qrow b { display: block; font-size: 14.5px; font-weight: 600; }
+.qrow small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.mini-step { display: flex; align-items: center; gap: 4px; background: var(--soft); border-radius: 999px; padding: 3px; flex: none; }
+.mini-step button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #fff; font-size: 18px; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.mini-step b { min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+/* moje poloha */
+.me-wrap { pointer-events: none !important; }
+.me { position: relative; display: block; width: 64px; height: 64px; }
+.me i { position: absolute; left: 50%; top: 50%; border-radius: 50%; }
+.me .dot { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: #007AFF; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.me .halo { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: rgba(0,122,255,.35); animation: me-pulse 2s ease-out infinite; }
+.me .cone { width: 64px; height: 64px; margin: -32px 0 0 -32px; background: conic-gradient(from -28deg, rgba(0,122,255,.38) 0 56deg, transparent 56deg); -webkit-mask: radial-gradient(circle, #000 0 60%, transparent 70%); mask: radial-gradient(circle, #000 0 60%, transparent 70%); }
+@keyframes me-pulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(3.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .me .halo { animation: none; } }
+
 /* menší notebook */
 @media (min-width: 821px) and (max-width: 1280px) {
   :root { --rail-w: 64px; --panel-w: 330px; }
@@ -948,6 +1025,23 @@ table.cov tr { cursor: pointer; }
   .leaflet-bottom { bottom: calc(var(--tabbar) + var(--safe-b) + 74px); }
   .leaflet-control-attribution { font-size: 9.5px; }
   .leaflet-control-scale { display: none; }
+}
+
+/* telefon – sklo na sheetu a plovoucích prvcích */
+@media (max-width: 820px) {
+  #panel { background: rgba(248,248,250,.78); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); border-top: 1px solid rgba(255,255,255,.75); border-radius: 30px 30px 0 0; transition: transform .38s var(--ease); }
+  #tabs { background: transparent; border-radius: 30px 30px 0 0; }
+  #tabs button.on { background: none; }
+  #panel-body { background: transparent; }
+  #panel-handle { background: var(--glass); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+  #legend { background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255,255,255,.7); border-radius: 999px; }
+  #legend .chip { background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  #muni { background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255,255,255,.7); border-radius: 999px; }
+  #toast { max-width: calc(100% - 20px); }
+  #toast.act { font-size: 13px; top: auto; bottom: calc(var(--tabbar) + var(--safe-b) + 84px); width: calc(100% - 20px); }
+  #panel.open ~ #map-wrap #tools, #panel.open ~ #map-wrap #legend { opacity: 0; pointer-events: none; }
+  #tools, #legend { transition: opacity .25s var(--ease); }
+  #panel { background: rgba(246,246,248,.9); }
 }
 </style>
 </head>
@@ -1877,10 +1971,10 @@ var pinSvg = '<svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M
 var CFG = window.RZT_CONFIG;
 var L = window.L;
 var STATUS_BASE = {
-  none: { label: "Neevidov\xE1no", color: "#9aa0a6" },
-  done: { label: "Rozneseno", color: "#2e9e4f" },
-  partial: { label: "\u010C\xE1ste\u010Dn\u011B", color: "#f08c00" },
-  revisit: { label: "Znovu nav\u0161t\xEDvit", color: "#d7263d" }
+  none: { label: "Neevidov\xE1no", color: "#8E8E93" },
+  done: { label: "Rozneseno", color: "#30B651" },
+  partial: { label: "\u010C\xE1ste\u010Dn\u011B", color: "#FF9500" },
+  revisit: { label: "Znovu nav\u0161t\xEDvit", color: "#FF3B30" }
 };
 var STATUS = new Proxy(STATUS_BASE, { get: (t, k) => t[k] || t.none });
 var ORDER = ["done", "partial", "revisit", "none"];
@@ -2075,7 +2169,7 @@ function setBuildingStatus(id, status, flyers = 0, note = "") {
   store.put("building_records", { id, status, last_visit: status === "none" ? r.last_visit : today() });
   if (status !== "none" || flyers) {
     const ents = entrancesOf(id);
-    addVisit({ target_type: "building", target_id: id, building_id: id, status, flyers, note, municipality: rec(id).municipality || "", entrances_done: ents.length ? ents.filter((e) => e.status === "done").length : null });
+    return addVisit({ target_type: "building", target_id: id, building_id: id, status, flyers, note, municipality: rec(id).municipality || "", entrances_done: ents.length ? ents.filter((e) => e.status === "done").length : null });
   }
 }
 function deriveFromEntrances(id) {
@@ -2164,6 +2258,9 @@ function addBuilding(b) {
   B.set(b.id, b);
   b.layer = b.geometry.type === "Point" ? L.circleMarker([b.geometry.coordinates[1], b.geometry.coordinates[0]], { renderer: canvas, radius: 9, ...bStyle(b.id) }) : L.polygon(toLatLngs(b.geometry), { renderer: canvas, ...bStyle(b.id) });
   b.layer.on("click", (e) => onBuildingClick(b.id, e));
+  b.layer.on("dblclick", (e) => {
+    if (state.mode === "browse") L.DomEvent.stop(e);
+  });
   b.layer.addTo(map);
 }
 function dropBuilding(id) {
@@ -2177,6 +2274,43 @@ function dropBuilding(id) {
 function fromStoreRow(g) {
   return { id: g.id, osm_type: g.osm_type, osm_id: g.osm_id, source: g.source, geometry: g.geometry, lat: g.lat, lon: g.lon, tags: g.osm_tags || {} };
 }
+var QPREF = "rzt-quick";
+var prefs = (() => {
+  try {
+    return { quick: true, flyers: 1, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
+  } catch (e) {
+    return { quick: true, flyers: 1 };
+  }
+})();
+function savePrefs() {
+  try {
+    localStorage.setItem(QPREF, JSON.stringify(prefs));
+  } catch (e) {
+  }
+}
+var lastTap = { id: null, t: 0 };
+function quickMark(id) {
+  const before = rec(id) ? { ...rec(id) } : null;
+  const visit = setBuildingStatus(id, "done", prefs.flyers, "");
+  restyle(id);
+  if (navigator.vibrate) try {
+    navigator.vibrate(12);
+  } catch (e) {
+  }
+  const v = view(id);
+  toastAction(`Rozneseno \xB7 ${titleOf(v)}${prefs.flyers > 1 ? ` \xB7 ${prefs.flyers} ks` : ""}`, [
+    { label: "Zp\u011Bt", fn: () => {
+      if (visit) store.remove("visits", visit.id);
+      if (before) store.put("building_records", { id, status: before.status, last_visit: before.last_visit });
+      else store.remove("building_records", id);
+      restyle(id);
+      softRender();
+      toast("Vr\xE1ceno.");
+    } },
+    { label: "Detail", fn: () => select({ type: "building", id }) }
+  ]);
+  softRender();
+}
 function onBuildingClick(id, e) {
   if (state.mode === "draw" || state.mode === "street" || state.manualPoint) return;
   L.DomEvent.stopPropagation(e);
@@ -2184,6 +2318,13 @@ function onBuildingClick(id, e) {
     state.multi.has(id) ? state.multi.delete(id) : state.multi.add(id);
     restyle(id);
     renderModebar();
+    return;
+  }
+  const now = Date.now();
+  if (lastTap.id === id && now - lastTap.t < 450) return;
+  lastTap = { id, t: now };
+  if (prefs.quick && statusOf(id) !== "done" && !entrancesOf(id).length) {
+    quickMark(id);
     return;
   }
   select({ type: "building", id });
@@ -2578,34 +2719,86 @@ $("#tools").addEventListener("click", (e) => {
   else setMode(state.mode === t ? "browse" : t);
 });
 var geoWatch = null;
-var meDot = null;
+var meMark = null;
 var meAcc = null;
 var geoFirst = true;
 var geoHigh = true;
+var geoFollow = false;
+var lastPos = null;
+var wake = null;
+var panning = false;
+var locBtn = () => document.querySelector('[data-tool="locate"]');
+function locUi() {
+  const b = locBtn();
+  if (!b) return;
+  b.classList.toggle("on", geoWatch != null && geoFollow);
+  b.classList.toggle("track", geoWatch != null && !geoFollow);
+  b.querySelector("span").textContent = geoWatch == null ? "Moje poloha" : geoFollow ? "Sleduji" : "Vycentrovat";
+}
+async function wakeOn() {
+  try {
+    if ("wakeLock" in navigator && !wake && !document.hidden) {
+      wake = await navigator.wakeLock.request("screen");
+      wake.addEventListener("release", () => {
+        wake = null;
+      });
+    }
+  } catch (e) {
+    wake = null;
+  }
+}
+function wakeOff() {
+  try {
+    if (wake) wake.release();
+  } catch (e) {
+  }
+  wake = null;
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && geoWatch != null) wakeOn();
+});
 function geoStop() {
   if (geoWatch != null) navigator.geolocation.clearWatch(geoWatch);
   geoWatch = null;
-  if (meDot) {
-    meDot.remove();
-    meDot = null;
+  geoFollow = false;
+  lastPos = null;
+  if (meMark) {
+    meMark.remove();
+    meMark = null;
   }
   if (meAcc) {
     meAcc.remove();
     meAcc = null;
   }
-  document.querySelector('[data-tool="locate"]').classList.remove("on");
+  wakeOff();
+  locUi();
+}
+function follow(ll, first) {
+  panning = true;
+  if (first) map.setView(ll, Math.max(map.getZoom(), 18), { animate: true });
+  else map.panTo(ll, { animate: true, duration: 0.6, easeLinearity: 0.4, noMoveStart: true });
+  setTimeout(() => {
+    panning = false;
+  }, 700);
 }
 function geoStart() {
   geoWatch = navigator.geolocation.watchPosition((p) => {
     const ll = [p.coords.latitude, p.coords.longitude], acc = Math.min(p.coords.accuracy || 0, 2e3);
-    if (!meAcc) meAcc = L.circle(ll, { renderer: svgSketch, interactive: false, radius: acc, color: "#1a73e8", weight: 1, fillColor: "#1a73e8", fillOpacity: 0.1 }).addTo(map);
+    lastPos = ll;
+    if (!meAcc) meAcc = L.circle(ll, { renderer: svgSketch, interactive: false, radius: acc, color: "#007AFF", weight: 1, opacity: 0.35, fillColor: "#007AFF", fillOpacity: 0.1 }).addTo(map);
     else meAcc.setLatLng(ll).setRadius(acc);
-    if (!meDot) meDot = L.circleMarker(ll, { renderer: svgSketch, interactive: false, radius: 8, color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 }).addTo(map);
-    else meDot.setLatLng(ll);
+    const hd = p.coords.heading, moving = Number.isFinite(hd) && (p.coords.speed == null || p.coords.speed > 0.4);
+    const html = `<span class="me"><i class="halo"></i>${moving ? `<i class="cone" style="transform:rotate(${Math.round(hd)}deg)"></i>` : ""}<i class="dot"></i></span>`;
+    if (!meMark) meMark = L.marker(ll, { interactive: false, keyboard: false, zIndexOffset: 1e3, icon: L.divIcon({ className: "me-wrap", html, iconSize: [64, 64] }) }).addTo(map);
+    else {
+      meMark.setLatLng(ll);
+      const el = meMark.getElement();
+      if (el) el.innerHTML = html;
+    }
+    if (geoFollow) follow(ll, geoFirst);
     if (geoFirst) {
       geoFirst = false;
-      map.setView(ll, Math.max(map.getZoom(), 17));
-      toast(acc > 150 ? `Poloha nalezena, ale nep\u0159esn\u011B (\xB1${Math.round(acc)} m).` : "Poloha nalezena.");
+      toast(acc > 150 ? `Poloha nalezena, ale nep\u0159esn\u011B (\xB1${Math.round(acc)} m).` : "Sleduji tvoji polohu. Mapa jede s tebou.");
     }
   }, (err) => {
     if (err.code === 3 && geoHigh) {
@@ -2617,9 +2810,21 @@ function geoStart() {
     if (err.code !== 1 && !geoFirst) return;
     geoStop();
     geoHelp(err.code);
-  }, { enableHighAccuracy: geoHigh, maximumAge: 15e3, timeout: geoHigh ? 15e3 : 3e4 });
+  }, { enableHighAccuracy: geoHigh, maximumAge: 5e3, timeout: geoHigh ? 15e3 : 3e4 });
 }
+map.on("dragstart", () => {
+  if (geoWatch != null && geoFollow && !panning) {
+    geoFollow = false;
+    locUi();
+  }
+});
 function locate() {
+  if (geoWatch != null && !geoFollow) {
+    geoFollow = true;
+    locUi();
+    if (lastPos) follow(lastPos, false);
+    return;
+  }
   if (geoWatch != null) {
     geoStop();
     toast("Sledov\xE1n\xED polohy vypnuto.");
@@ -2635,9 +2840,11 @@ function locate() {
   }
   geoFirst = true;
   geoHigh = true;
-  document.querySelector('[data-tool="locate"]').classList.add("on");
+  geoFollow = true;
   toast("Zji\u0161\u0165uji polohu\u2026");
   geoStart();
+  locUi();
+  wakeOn();
 }
 function geoHelp(code) {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
@@ -2703,9 +2910,24 @@ var toastTimer;
 function toast(text) {
   const el = $("#toast");
   el.textContent = text;
+  el.classList.remove("act");
   el.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.hidden = true, 3200);
+}
+function toastAction(text, actions, ms = 5e3) {
+  const el = $("#toast");
+  el.innerHTML = `<span>${esc(text)}</span>` + actions.map((a, i) => `<button type="button" data-i="${i}">${esc(a.label)}</button>`).join("");
+  el.classList.add("act");
+  el.hidden = false;
+  el.onclick = (ev) => {
+    const b = ev.target.closest("button");
+    if (!b) return;
+    el.hidden = true;
+    actions[+b.dataset.i].fn();
+  };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.hidden = true, ms);
 }
 var pendingRender = false;
 var lastStatusTap = 0;
@@ -2938,6 +3160,11 @@ function syncCard() {
     <div class="grid2" style="grid-template-columns:1.3fr 1fr"><button class="tbtn pri" data-act="sb-sync">${svg("refresh")}Synchronizovat te\u010F</button><button class="tbtn soft" data-act="sb-logout">${svg("logout")}Odhl\xE1sit</button></div>`;
   return `<section class="card">${head}${inner}</section>`;
 }
+var quickCard = () => card("Klepnut\xED na budovu", "pointer", `<div class="qrow">
+    <div><b>Rovnou ozna\u010Dit jako rozneseno</b><small>Klepnut\xED obarv\xED budovu zelen\u011B. Klepnut\xEDm na zelenou budovu otev\u0159e\u0161 detail.</small></div>
+    <button type="button" class="toggle ${prefs.quick ? "on" : ""}" data-act="q-toggle" role="switch" aria-checked="${prefs.quick}" aria-label="Rovnou ozna\u010Dit jako rozneseno"><i></i></button></div>
+  <div class="qrow"><div><b>Let\xE1k\u016F za budovu</b><small>P\u0159ip\xED\u0161e se p\u0159i ka\u017Ed\xE9m klepnut\xED.</small></div>
+    <div class="mini-step"><button type="button" data-act="q-">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+">+</button></div></div>`);
 var exportCard = () => card("Export dat", "download", `<div class="grid2">
   <button class="tbtn" data-act="x-geojson">${svg("globe")}GeoJSON</button><button class="tbtn" data-act="x-csv">${svg("file")}CSV \u2013 budovy</button>
   <button class="tbtn" data-act="x-csv-visits">${svg("table")}CSV \u2013 n\xE1v\u0161t\u011Bvy</button><button class="tbtn" data-act="x-backup">${svg("database")}\xDApln\xE1 z\xE1loha</button></div>`);
@@ -2952,10 +3179,10 @@ var aboutCard = () => card("O datech", "info", `<p class="hint" style="margin:0"
 var VIEWS = {
   stats: overviewHtml,
   list: listHtml,
-  map: () => syncCard() + exportCard() + importCard() + mapDataCard() + legendCard(),
+  map: () => quickCard() + syncCard() + exportCard() + importCard() + mapDataCard() + legendCard(),
   charts: chartsHtml,
   io: () => exportCard() + importCard(),
-  settings: () => syncCard() + mapDataCard() + aboutCard()
+  settings: () => quickCard() + syncCard() + mapDataCard() + aboutCard()
 };
 $("#tabs").addEventListener("click", (e) => {
   const b = e.target.closest("button");
@@ -3017,6 +3244,20 @@ $("#panel-body").addEventListener("click", (e) => {
   switch (act) {
     case "back":
       select(null);
+      if (window.innerWidth <= 820) setPanel(false);
+      break;
+    // na telefonu zpět na mapu
+    case "q-toggle":
+      prefs.quick = !prefs.quick;
+      savePrefs();
+      renderPanel();
+      toast(prefs.quick ? "Klepnut\xED na budovu ji rovnou ozna\u010D\xED." : "Klepnut\xED na budovu otev\u0159e detail.");
+      break;
+    case "q-":
+    case "q+":
+      prefs.flyers = Math.min(500, Math.max(0, prefs.flyers + (act === "q+" ? 1 : -1)));
+      savePrefs();
+      renderPanel();
       break;
     case "fl-":
     case "fl+":
