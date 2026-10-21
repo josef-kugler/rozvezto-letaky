@@ -773,7 +773,7 @@ table.cov tr { cursor: pointer; }
 .bar i { display: block; height: 100%; background: var(--s-done); }
 
 /* okna a hlášky */
-#modal { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#modal { position: fixed; inset: 0; z-index: 3080; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .dlg { width: min(460px, 100%); max-height: 90dvh; overflow: auto; background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
 .dlg h2 { margin-bottom: 8px; }
 .dlg p { margin: 0 0 12px; }
@@ -815,8 +815,10 @@ table.cov tr { cursor: pointer; }
 #sync[data-s=synced] { background: #e9f6ed; border-color: #d3ecdb; }
 #sync[data-s=synced] i { background: var(--s-done); }
 #sync[data-s=syncing] i, #sync[data-s=pending] i { background: var(--s-partial); animation: pulse 1s infinite; }
-#sync[data-s=offline], #sync[data-s=conflict] { background: #fdecee; border-color: #f7d3d8; }
-#sync[data-s=offline] i, #sync[data-s=conflict] i { background: var(--s-revisit); }
+#sync[data-s=offline], #sync[data-s=conflict], #sync[data-s=error] { background: #fdecee; border-color: #f7d3d8; }
+#sync[data-s=offline] i, #sync[data-s=conflict] i, #sync[data-s=error] i { background: var(--s-revisit); }
+#sync[data-s=offline] { background: color-mix(in srgb, var(--s-partial) 14%, var(--card)); border-color: transparent; }
+#sync[data-s=offline] i { background: var(--s-partial); }
 @keyframes pulse { 50% { opacity: .35; } }
 #avatar { width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--soft); font-weight: 700; font-size: 15px; flex: none; }
 
@@ -895,7 +897,7 @@ table.cov tr { cursor: pointer; }
   --accent-tint: color-mix(in srgb, var(--red) 12%, white);
   --bg: #F2F2F7; --soft: rgba(118,118,128,.12); --line: rgba(60,60,67,.14);
   --muted: rgba(60,60,67,.6); --glass: rgba(255,255,255,.62);
-  --field: rgba(60,60,67,.18);
+  --field: rgba(60,60,67,.18); --faint: rgba(60,60,67,.3);
   --ease: cubic-bezier(.32,.72,0,1);
 }
 .glass, #tools button, .mapbtns .grp, .mapbtns .solo, .chip, #search-results, .dlg {
@@ -961,7 +963,7 @@ button:active { transform: scale(.97); }
 .me i { position: absolute; left: 50%; top: 50%; border-radius: 50%; }
 .me .dot { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: #007AFF; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
 .me .halo { width: 20px; height: 20px; margin: -10px 0 0 -10px; background: rgba(0,122,255,.35); animation: me-pulse 2s ease-out infinite; }
-.me .cone { width: 64px; height: 64px; margin: -32px 0 0 -32px; background: conic-gradient(from -28deg, rgba(0,122,255,.38) 0 56deg, transparent 56deg); -webkit-mask: radial-gradient(circle, #000 0 60%, transparent 70%); mask: radial-gradient(circle, #000 0 60%, transparent 70%); }
+.me .cone { display: none; transition: transform .3s var(--ease); width: 64px; height: 64px; margin: -32px 0 0 -32px; background: conic-gradient(from -28deg, rgba(0,122,255,.38) 0 56deg, transparent 56deg); -webkit-mask: radial-gradient(circle, #000 0 60%, transparent 70%); mask: radial-gradient(circle, #000 0 60%, transparent 70%); }
 @keyframes me-pulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(3.2); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .me .halo { animation: none; } }
 
@@ -992,7 +994,7 @@ button:active { transform: scale(.97); }
   .acc-h:active { transform: none; background: rgba(0,0,0,.05); }
   .tile { width: 32px; height: 32px; border-radius: 9px; background: var(--c); color: #fff; display: grid; place-items: center; flex: none; }
   .tile .ico { width: 19px; height: 19px; stroke-width: 2.2; }
-  .acc-l { flex: 1; min-width: 0; font-weight: 500; }
+  .acc-l { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .acc-v { color: var(--muted); font-size: 14.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .acc-chev { width: 18px; height: 18px; flex: none; color: rgba(60,60,67,.3); transform: rotate(-90deg); transition: transform .35s var(--ease), color .2s; }
   .acc.open .acc-chev { transform: rotate(0deg); color: var(--accent); }
@@ -1003,7 +1005,7 @@ button:active { transform: scale(.97); }
   .acc-pad { display: flex; flex-direction: column; gap: 12px; padding: 2px 12px 14px; }
   .acc-pad:empty { padding: 0; }
   .acc-pad .card { background: var(--bg); box-shadow: none; border-radius: 18px; padding: 16px; }
-  .acc-pad .tbtn, .acc-pad .fact, .acc-pad .mini-step button { background: #fff; }
+  .acc-pad .tbtn:not(.pri):not(.danger), .acc-pad .fact, .acc-pad .mini-step button { background: var(--card); }
   .acc-pad .grid2 { grid-template-columns: 1fr 1fr; }
 }
 @media (min-width: 821px) and (max-width: 1100px) { :root { --side-w: 340px; } }
@@ -1085,6 +1087,173 @@ button:active { transform: scale(.97); }
   #tools, #legend { transition: opacity .25s var(--ease); }
   #panel { background: rgba(246,246,248,.9); }
 }
+
+/* ============ moje poloha: směr, slabý signál, pokračování ve sledování ============ */
+.me-wrap.has-heading .me .cone { display: block; }
+.me-wrap.stale .me .dot { background: #8E8E93; }
+.me-wrap.stale .me .halo { display: none; }
+.me-wrap.stale .me .cone { opacity: .4; }
+#follow-resume { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 1050; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; font-size: 14.5px; white-space: nowrap; box-shadow: 0 8px 24px rgba(249,58,37,.35), 0 1px 2px rgba(0,0,0,.1); }
+#follow-resume .ico { width: 20px; height: 20px; }
+#follow-resume:active { transform: translateX(-50%) scale(.97); }
+@media (max-width: 820px) {
+  #follow-resume { bottom: calc(var(--tabbar) + var(--safe-b) + 98px); }
+  #panel.open ~ #map-wrap #follow-resume { opacity: 0; pointer-events: none; }
+}
+
+/* ============ Nastavení: seskupené seznamy ============ */
+.set { display: flex; flex-direction: column; min-width: 0; }
+.sg-h { margin: 22px 16px 8px; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.set > .sg-h:first-child { margin-top: 4px; }
+.sg { background: var(--card); border-radius: 22px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.sg-f { margin: 8px 16px 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.sr { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 9px 14px; width: 100%; border: 0; background: none; text-align: left; color: var(--ink); font-size: 15px; border-radius: 0; }
+.sr + .sr::before, .sg > * + .sr::before, .acct-more::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 1px; background: var(--line); }
+.sr.kv + .sr::before, .sr + .sr.kv::before, .sr.kv::before { left: 16px; }
+.sr .tile { width: 30px; height: 30px; border-radius: 8px; background: var(--c); color: #fff; display: grid; place-items: center; flex: none; }
+.sr .tile .ico { width: 18px; height: 18px; stroke-width: 2.2; }
+.sr-t { flex: 1; min-width: 0; }
+.sr-t b { display: block; font-weight: 500; font-size: 15.5px; line-height: 1.3; }
+.sr-t small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+.sr-v { color: var(--muted); font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sr-chev { width: 18px; height: 18px; flex: none; color: var(--faint); transform: rotate(-90deg); }
+.sr.link:hover, .acct-row:hover { background: rgba(118,118,128,.06); }
+.sr.link:active, .acct-row:active { transform: none; background: rgba(118,118,128,.12); }
+.sr.col { flex-direction: column; align-items: stretch; gap: 10px; }
+.sr-top { display: flex; align-items: center; gap: 12px; }
+.sr.kv { min-height: 46px; padding: 10px 16px; justify-content: space-between; gap: 16px; }
+.sr.kv span { color: var(--ink); white-space: nowrap; flex: none; }
+.sr.kv b { font-weight: 500; color: var(--muted); text-align: right; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.sr-pad { padding: 14px 16px 16px; }
+.sg-note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.t-warn { color: var(--s-partial) !important; font-weight: 600 !important; }
+.t-bad { color: var(--s-revisit) !important; font-weight: 600 !important; }
+.seg { display: flex; padding: 2px; border-radius: 10px; background: var(--soft); gap: 2px; }
+.seg button { flex: 1 1 0; min-width: 0; height: 34px; padding: 0 6px; border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg button.on { background: var(--card); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 1px 1px rgba(0,0,0,.04); }
+.seg button:active { transform: none; }
+.seg button:focus-visible, .toggle:focus-visible, .sr.link:focus-visible, .acct-row:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; }
+.sdots { display: flex; gap: 6px; }
+.sdots i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+.acct-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 76px; padding: 12px 16px; border: 0; background: none; text-align: left; color: var(--ink); border-radius: 0; }
+.acct-row .av, .acct .av { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, #FFB36B, var(--accent)); color: #fff; font-weight: 700; font-size: 18px; }
+.acct-row .av.empty { background: var(--accent-tint); color: var(--accent); }
+.acct-row .av .ico { width: 24px; height: 24px; }
+.acct-row .sr-t b { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.acct-chev { transition: transform .3s var(--ease); }
+.acct-row[aria-expanded="true"] .acct-chev { transform: rotate(0deg); color: var(--accent); }
+.sync-line { display: flex !important; align-items: center; gap: 6px; }
+.sync-line i { width: 8px; height: 8px; border-radius: 50%; background: var(--s-none); flex: none; }
+.sync-line[data-tone=ok] i { background: var(--s-done); }
+.sync-line[data-tone=busy] i { background: var(--s-partial); animation: pulse 1s infinite; }
+.sync-line[data-tone=warn] i { background: var(--s-partial); }
+.sync-line[data-tone=bad] i { background: var(--s-revisit); }
+.sync-line[data-tone=bad] { color: var(--s-revisit) !important; }
+.acct-more { position: relative; }
+.sr-err { margin: 4px 16px 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; color: var(--s-revisit); background: color-mix(in srgb, var(--s-revisit) 10%, var(--card)); }
+.sr-btns { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px 16px 16px; }
+.tbtn.danger { background: color-mix(in srgb, var(--s-revisit) 10%, var(--card)); color: var(--s-revisit); font-weight: 600; }
+.tbtn:disabled { opacity: .55; }
+.vc { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.vc b { font-size: 34px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.vc span { color: var(--muted); font-size: 13.5px; }
+#vcard .bar { height: 10px; border-radius: 999px; background: var(--soft); margin-top: 8px; }
+#vcard .bar i { border-radius: 999px; }
+ol.help { padding-left: 20px; margin: 10px 0 0; display: grid; gap: 8px; font-size: 14.5px; }
+@media (min-width: 821px) {
+  .acc-pad .set { margin: 0 -4px; }
+  .acc-pad .sg { background: var(--bg); box-shadow: none; }
+  .acc-pad .seg button.on { background: var(--card); }
+}
+@media (max-width: 820px) { .sg { border-radius: 18px; } .sg-h { margin-left: 12px; } .sg-f { margin-left: 12px; margin-right: 12px; } }
+
+/* ============ Přihlášení ============ */
+#login { position: fixed; inset: 0; z-index: 3050; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); overflow-y: auto;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, #fff3ec) 0%, color-mix(in srgb, var(--accent) 70%, #ffb36b) 100%); }
+#login::before { content: ''; position: fixed; inset: 0; background: radial-gradient(60% 50% at 20% 15%, rgba(255,255,255,.55), transparent 70%); pointer-events: none; }
+.lg-card { position: relative; width: min(420px, 100%); padding: 32px 24px 20px; border-radius: 36px; text-align: center; --glass: rgba(255,255,255,.72); }
+.lg-x { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--soft); color: var(--muted); }
+.lg-x .ico { width: 18px; height: 18px; }
+.lg-logo { height: 34px; width: auto; margin: 4px auto 18px; display: block; padding: 8px 14px; background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.lg-head h2 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 8px; }
+.lg-head p { margin: 0 auto 22px; color: var(--muted); font-size: 14.5px; line-height: 1.5; max-width: 330px; }
+.lg-fields { background: var(--card); border-radius: 16px; overflow: hidden; text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.lg-f { position: relative; display: block; padding: 9px 16px 8px; border: 2px solid transparent; border-radius: 16px; transition: border-color .2s, box-shadow .2s; }
+.lg-f + .lg-f { border-radius: 0 0 16px 16px; }
+.lg-f:first-child:not(:last-child) { border-radius: 16px 16px 0 0; }
+.lg-f + .lg-f::before { content: ''; position: absolute; top: -2px; left: 16px; right: 0; height: 1px; background: var(--line); }
+.lg-f span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.lg-f input { width: 100%; height: 30px; border: 0; padding: 0; background: none; font-size: 17px; outline: none; color: var(--ink); }
+.lg-f input::placeholder { color: var(--faint); }
+.lg-f:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); z-index: 1; }
+.lg-f.bad { border-color: var(--s-revisit); }
+.lg-f.pw input { padding-right: 44px; }
+.lg-eye { position: absolute; right: 8px; bottom: 6px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--muted); }
+.lg-eye .ico { width: 20px; height: 20px; }
+.lg-err { margin: 12px 4px 0; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; text-align: left; color: var(--s-revisit); background: color-mix(in srgb, var(--s-revisit) 10%, var(--card)); }
+.lg-submit { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 52px; margin-top: 16px; border: 0; border-radius: 16px; background: var(--accent); color: #fff; font-weight: 600; font-size: 16.5px; box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent); }
+.lg-submit:disabled { opacity: .75; cursor: progress; }
+.lg-submit .spin { display: none; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; animation: lg-spin .8s linear infinite; }
+.lg-submit.busy .spin { display: block; }
+@keyframes lg-spin { to { transform: rotate(360deg); } }
+.lg-link { margin-top: 14px; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 14.5px; padding: 8px 12px; }
+.lg-or { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; color: var(--muted); font-size: 13px; }
+.lg-or::before, .lg-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.lg-apple { width: 100%; height: 52px; border: 0; border-radius: 16px; background: #000; color: #fff; font-weight: 600; font-size: 16.5px; }
+.lg-later { display: block; margin: 8px auto 0; border: 0; background: none; color: var(--muted); font-size: 13.5px; padding: 10px 12px; }
+html.lg-on, html.lg-on body { overflow: hidden; }
+
+/* ============ hustota a animace ============ */
+html[data-density=compact] .sr { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+html[data-density=compact] .sr-t small { display: none; }
+html[data-density=compact] .sr.col .sr-t small { display: block; }
+html[data-density=compact] .acc-h { min-height: 48px; }
+html[data-density=compact] .card { padding: 12px; }
+html[data-density=compact] #panel-body { gap: 10px; }
+html.no-anim *, html.no-anim *::before, html.no-anim *::after { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .seg button, .acct-chev, .lg-f { transition: none !important; } .lg-submit .spin { animation-duration: 2s; } }
+
+/* ============ tmavý vzhled ============ */
+html[data-theme=dark] {
+  color-scheme: dark;
+  --bg: #000; --bg-side: #0b0b0d; --card: #1C1C1E; --soft: rgba(118,118,128,.24); --line: rgba(84,84,88,.6);
+  --ink: #fff; --muted: rgba(235,235,245,.6); --faint: rgba(235,235,245,.3); --field: rgba(84,84,88,.8);
+  --glass: rgba(30,30,32,.62); --accent-tint: color-mix(in srgb, var(--red) 22%, #1C1C1E);
+  --sh: 0 2px 10px rgba(0,0,0,.5);
+  --red-dark: #ff6a57;
+}
+html[data-theme=dark] body { background: #000; }
+html[data-theme=dark] .glass, html[data-theme=dark] #tools button, html[data-theme=dark] .mapbtns .grp, html[data-theme=dark] .mapbtns .solo, html[data-theme=dark] .chip, html[data-theme=dark] #search-results, html[data-theme=dark] .dlg { border-color: rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 28px rgba(0,0,0,.45); }
+html[data-theme=dark] .dlg { --glass: rgba(36,36,38,.9); }
+html[data-theme=dark] .lg-card { --glass: rgba(28,28,30,.8); }
+html[data-theme=dark] #login { background: linear-gradient(135deg, #1a0d0a 0%, color-mix(in srgb, var(--accent) 55%, #000) 100%); }
+html[data-theme=dark] #login::before { background: radial-gradient(60% 50% at 20% 15%, rgba(255,255,255,.08), transparent 70%); }
+html[data-theme=dark] #top { background: rgba(18,18,20,.82); border-bottom-color: var(--line); }
+html[data-theme=dark] #search input:focus { background: var(--card); }
+html[data-theme=dark] #sync[data-s=synced] { background: color-mix(in srgb, var(--s-done) 18%, #1C1C1E); }
+html[data-theme=dark] #sync[data-s=conflict], html[data-theme=dark] #sync[data-s=error] { background: color-mix(in srgb, var(--s-revisit) 20%, #1C1C1E); }
+html[data-theme=dark] .lg li { background: color-mix(in srgb, var(--c) 18%, #1C1C1E); }
+html[data-theme=dark] .mini-step button, html[data-theme=dark] .toggle:not(.on) { background-color: rgba(120,120,128,.32); }
+html[data-theme=dark] .mini-step button { background: #636366; color: #fff; }
+html[data-theme=dark] .seg button.on { background: #636366; }
+html[data-theme=dark] .acc-h:hover { background: rgba(255,255,255,.04); }
+html[data-theme=dark] .acc-chev, html[data-theme=dark] .acct .acc-chev { color: var(--faint); }
+html[data-theme=dark] #toast { background: rgba(58,58,60,.92); }
+html[data-theme=dark] #toast.act button:first-of-type { background: #fff; color: #000; }
+html[data-theme=dark] #modal { background: rgba(0,0,0,.5); }
+html[data-theme=dark] .leaflet-container { background: #1b1b1d; }
+html[data-theme=dark] .leaflet-control-attribution { background: rgba(28,28,30,.75) !important; color: rgba(235,235,245,.6); }
+html[data-theme=dark] .leaflet-control-attribution a { color: #8ab4ff; }
+html[data-theme=dark] .leaflet-control-scale-line { background: rgba(28,28,30,.7); color: #fff; border-color: #aaa; }
+html[data-theme=dark] select option { background: #1C1C1E; color: #fff; }
+@media (max-width: 820px) {
+  html[data-theme=dark] #panel { background: rgba(22,22,24,.9); border-top-color: rgba(255,255,255,.1); }
+  html[data-theme=dark] #legend, html[data-theme=dark] #muni { border-color: rgba(255,255,255,.12); }
+  html[data-theme=dark] #tabs button { color: rgba(235,235,245,.6); }
+  html[data-theme=dark] #tabs button.on { color: #ff6a57; }
+  html[data-theme=dark] #panel-handle { border-color: #ff6a57; color: #ff6a57; }
+}
+html[data-theme=dark] #logo { background: #fff; border-radius: 10px; padding: 3px 8px; box-sizing: content-box; }
 </style>
 </head>
 <body>
@@ -1133,11 +1302,13 @@ button:active { transform: scale(.97); }
       <button data-tool="area" title="Obkreslit oblast"><i data-ico="pentagon"></i><span>Oblast</span></button>
       <button data-tool="manual" title="Přidat budovu ručně"><i data-ico="plus"></i><span>Přidat</span></button>
     </div>
+    <button id="follow-resume" type="button" hidden><i data-ico="locate"></i><span>Pokračovat ve sledování</span></button>
     <div id="legend"></div>
     <div id="notice" hidden></div>
     <div id="modebar" hidden></div>
   </main>
 </div>
+<div id="login" hidden></div>
 <div id="modal" hidden></div>
 <div id="toast" hidden></div>
 
@@ -1187,7 +1358,7 @@ window.RZT_CONFIG = {
   cacheDays: 14 // jak dlouho se drží stažené budovy v zařízení
 };
 </script>
-<script type="module">// ../../../../../../home/claude/flyer-tracker/js/store.js
+<script type="module">// js/store.js
 var TABLES = ["buildings", "building_records", "entrances", "areas", "visits"];
 var COLUMNS = {
   buildings: ["id", "osm_type", "osm_id", "source", "geometry", "lat", "lon", "osm_tags", "deleted"],
@@ -1427,6 +1598,11 @@ var Store = class {
       if (this.t[_t] && row.id) this.t[_t].set(row.id, row);
     }
     this.cursor = await this.persist.get("cursor") || {};
+    try {
+      const ls = await this.persist.get("lastSync");
+      if (ls) this.lastSync = new Date(ls);
+    } catch (e) {
+    }
   }
   setRemote(remote) {
     if (this.unsub) this.unsub();
@@ -1486,7 +1662,7 @@ var Store = class {
     if (!this.remote) s = "local";
     else if (this.conflicts.length) s = "conflict";
     else if (this.busy) s = "syncing";
-    else if (this.offline) s = "offline";
+    else if (this.offline) s = typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "error";
     else s = this.pending() ? "pending" : "synced";
     if (s !== this.state) {
       this.state = s;
@@ -1582,6 +1758,8 @@ var Store = class {
       this.offline = false;
       this.lastError = null;
       this.lastSync = /* @__PURE__ */ new Date();
+      this.persist.set("lastSync", this.lastSync.toISOString()).catch(() => {
+      });
     } catch (e) {
       this.offline = true;
       this.fail(e);
@@ -1610,7 +1788,7 @@ var Store = class {
   }
 };
 
-// ../../../../../../home/claude/flyer-tracker/js/geo.js
+// js/geo.js
 var TILE_Z = 14;
 function lon2x(lon, z = TILE_Z) {
   return Math.floor((lon + 180) / 360 * 2 ** z);
@@ -1756,7 +1934,7 @@ function lineGeometry(el) {
   return c.length > 1 ? { type: "LineString", coordinates: c } : null;
 }
 
-// ../../../../../../home/claude/flyer-tracker/js/overpass.js
+// js/overpass.js
 var Overpass = class {
   constructor({ persist: persist2, endpoints, cacheDays = 14, fetchFn }) {
     this.persist = persist2;
@@ -1971,7 +2149,7 @@ var BUILDING_TYPES = {
 };
 var typeLabel = (v) => BUILDING_TYPES[v] || (v ? v : "Budova (typ neuveden)");
 
-// ../../../../../../home/claude/flyer-tracker/js/icons.js
+// js/icons.js
 var P = {
   dashboard: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
   list: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
@@ -2005,13 +2183,29 @@ var P = {
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m2 12 8.58 3.91a2 2 0 0 0 1.66 0L21 12M2 17l8.58 3.91a2 2 0 0 0 1.66 0L21 17"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
-  sidebar: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>'
+  sidebar: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+  nav: '<path d="M3 11 22 2l-9 19-2-8Z"/>',
+  leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  compass: '<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/>',
+  eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.36 0 8.17 2.69 9.94 6.65a1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5A10.75 10.75 0 0 1 2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sparkles: '<path d="M9.94 14.06 4 20M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2Z"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  rows: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  wifioff: '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>'
 };
 var svg = (name, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] || ""}</svg>`;
 var STATUS_ICON = { none: "home", done: "home", partial: "home", revisit: "revisit" };
 var pinSvg = '<svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>';
 
-// ../../../../../../home/claude/flyer-tracker/js/app.js
+// js/app.js
 var CFG = window.RZT_CONFIG;
 var L = window.L;
 var STATUS_BASE = {
@@ -2092,11 +2286,13 @@ var sb = null;
 var session = null;
 var map = L.map("map", { center: CFG.center, zoom: CFG.homeZoom, minZoom: 9, maxZoom: 20, zoomSnap: 0.5, zoomControl: false, tap: false });
 if (window.RZT_DEMO_FETCH) map.attributionControl.addAttribution("Uk\xE1zkov\xE1 data \u2013 bez mapov\xE9ho podkladu");
-else L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 20,
-  maxNativeZoom: 19,
-  attribution: '\xA9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">P\u0159isp\u011Bvatel\xE9 OpenStreetMap</a>'
-}).addTo(map);
+var OSM_ATTR = '\xA9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">P\u0159isp\u011Bvatel\xE9 OpenStreetMap</a>';
+var BASEMAPS = {
+  osm: { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", o: { maxNativeZoom: 19, attribution: OSM_ATTR } },
+  light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", o: { subdomains: "abcd", maxNativeZoom: 20, attribution: OSM_ATTR + ' \xA9 <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' } },
+  dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", o: { subdomains: "abcd", maxNativeZoom: 20, attribution: OSM_ATTR + ' \xA9 <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' } }
+};
+var baseLayer = null;
 map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 L.control.scale({ imperial: false, position: "bottomright" }).addTo(map);
 map.createPane("shapes").style.zIndex = 420;
@@ -2265,7 +2461,7 @@ var iconTimer = null;
 function updateIcons() {
   clearTimeout(iconTimer);
   iconTimer = setTimeout(() => {
-    const show = map.getZoom() >= ICON_ZOOM, vb = map.getBounds().pad(0.15);
+    const show = prefs.icons && map.getZoom() >= ICON_ZOOM, vb = map.getBounds().pad(0.15);
     let n = 0;
     for (const b of B.values()) {
       const want = show && n < MAX_ICONS && b.geometry.type !== "Point" && vb.contains([b.lat, b.lon]);
@@ -2319,11 +2515,12 @@ function fromStoreRow(g) {
   return { id: g.id, osm_type: g.osm_type, osm_id: g.osm_id, source: g.source, geometry: g.geometry, lat: g.lat, lon: g.lon, tags: g.osm_tags || {} };
 }
 var QPREF = "rzt-quick";
+var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true };
 var prefs = (() => {
   try {
-    return { quick: true, flyers: 1, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
+    return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
   } catch (e) {
-    return { quick: true, flyers: 1 };
+    return { ...PREF_DEFAULTS };
   }
 })();
 function savePrefs() {
@@ -2332,12 +2529,55 @@ function savePrefs() {
   } catch (e) {
   }
 }
+var mqDark = matchMedia("(prefers-color-scheme: dark)");
+var isDarkTheme = () => prefs.theme === "dark" || prefs.theme === "system" && mqDark.matches;
+function applyBasemap() {
+  if (window.RZT_DEMO_FETCH) return;
+  const k = prefs.basemap === "auto" ? isDarkTheme() ? "dark" : "osm" : BASEMAPS[prefs.basemap] ? prefs.basemap : "osm";
+  if (baseLayer && baseLayer.rztKey === k) return;
+  if (baseLayer) map.removeLayer(baseLayer);
+  baseLayer = L.tileLayer(BASEMAPS[k].url, { maxZoom: 20, ...BASEMAPS[k].o });
+  baseLayer.rztKey = k;
+  baseLayer.addTo(map);
+  baseLayer.bringToBack();
+}
+function applyLook() {
+  const h = document.documentElement, dark = isDarkTheme();
+  h.dataset.theme = dark ? "dark" : "light";
+  h.dataset.density = prefs.density === "compact" ? "compact" : "normal";
+  h.classList.toggle("no-anim", !prefs.anim);
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.content = dark ? "#000000" : "#F93A25";
+  applyBasemap();
+}
+if (mqDark.addEventListener) mqDark.addEventListener("change", () => {
+  if (prefs.theme === "system") applyLook();
+});
+applyLook();
+var VIEWKEY = "rzt-view";
+try {
+  const v = JSON.parse(localStorage.getItem(VIEWKEY) || "null");
+  if (prefs.lastView && v && [v.lat, v.lon, v.z].every(Number.isFinite) && haversine(v.lat, v.lon, CFG.center[0], CFG.center[1]) < (CFG.radiusKm + 10) * 1e3) map.setView([v.lat, v.lon], Math.min(19, Math.max(12, v.z)), { animate: false });
+} catch (e) {
+}
+var viewTimer = 0;
+map.on("moveend", () => {
+  clearTimeout(viewTimer);
+  viewTimer = setTimeout(() => {
+    if (!prefs.lastView) return;
+    const c = map.getCenter();
+    try {
+      localStorage.setItem(VIEWKEY, JSON.stringify({ lat: +c.lat.toFixed(6), lon: +c.lng.toFixed(6), z: map.getZoom() }));
+    } catch (e) {
+    }
+  }, 800);
+});
 var lastTap = { id: null, t: 0 };
 function quickMark(id) {
   const before = rec(id) ? { ...rec(id) } : null;
   const visit = setBuildingStatus(id, "done", prefs.flyers, "");
   restyle(id);
-  if (navigator.vibrate) try {
+  if (prefs.haptics && navigator.vibrate) try {
     navigator.vibrate(12);
   } catch (e) {
   }
@@ -2408,6 +2648,7 @@ function drawArea(id) {
     map.removeLayer(old);
     areaLayers.delete(id);
   }
+  if (!prefs.areas && !(state.sel && state.sel.id === id)) return;
   if (!a || !validGeom(a.geometry) || a.geometry.type === "Point") return;
   if (a.kind === "street" !== a.geometry.type.includes("Line")) return;
   const selected = state.sel && state.sel.id === id;
@@ -2762,22 +3003,42 @@ $("#tools").addEventListener("click", (e) => {
   else if (t === "area") setMode(state.mode === "draw" && state.draw.purpose === "area" ? "browse" : "draw", { purpose: "area" });
   else setMode(state.mode === t ? "browse" : t);
 });
-var geoWatch = null;
+var GEO = {
+  watch: null,
+  follow: false,
+  first: true,
+  high: true,
+  fix: null,
+  // poslední skutečně naměřený bod {lat, lon, acc, heading, speed, t}
+  target: null,
+  // kam se má tečka dostat (poslední bod po odfiltrování šumu)
+  shown: null,
+  // kde tečka právě je (interpolace pro vykreslení)
+  seg: null,
+  // probíhající přesun {from, to, t0, dur}
+  heading: null,
+  raf: 0,
+  lastMoveEnd: 0,
+  panned: false,
+  zooming: false,
+  lastFixAt: 0,
+  staleTimer: 0,
+  weakShown: false
+};
 var meMark = null;
 var meAcc = null;
-var geoFirst = true;
-var geoHigh = true;
-var geoFollow = false;
-var lastPos = null;
+var meEl = null;
 var wake = null;
-var panning = false;
 var locBtn = () => document.querySelector('[data-tool="locate"]');
 function locUi() {
   const b = locBtn();
   if (!b) return;
-  b.classList.toggle("on", geoWatch != null && geoFollow);
-  b.classList.toggle("track", geoWatch != null && !geoFollow);
-  b.querySelector("span").textContent = geoWatch == null ? "Moje poloha" : geoFollow ? "Sleduji" : "Vycentrovat";
+  const on = GEO.watch != null;
+  b.classList.toggle("on", on && GEO.follow);
+  b.classList.toggle("track", on && !GEO.follow);
+  b.querySelector("span").textContent = !on ? "Moje poloha" : GEO.follow ? "Sleduji" : "Moje poloha";
+  const r = $("#follow-resume");
+  if (r) r.hidden = !(on && !GEO.follow && GEO.fix);
 }
 async function wakeOn() {
   try {
@@ -2798,78 +3059,231 @@ function wakeOff() {
   }
   wake = null;
 }
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && geoWatch != null) wakeOn();
-});
-function geoStop() {
-  if (geoWatch != null) navigator.geolocation.clearWatch(geoWatch);
-  geoWatch = null;
-  geoFollow = false;
-  lastPos = null;
+var metersBetween = (a, b) => haversine(a.lat, a.lon, b.lat, b.lon);
+var reduceMotion = () => !prefs.anim || matchMedia("(prefers-reduced-motion: reduce)").matches;
+function meMarker(ll) {
+  if (meMark) return;
+  meMark = L.marker(ll, { interactive: false, keyboard: false, zIndexOffset: 1e3, icon: L.divIcon({ className: "me-wrap", html: '<span class="me"><i class="halo"></i><i class="cone"></i><i class="dot"></i></span>', iconSize: [64, 64] }) }).addTo(map);
+  meEl = meMark.getElement();
+}
+function geoClear() {
+  cancelAnimationFrame(GEO.raf);
+  GEO.raf = 0;
+  clearTimeout(GEO.staleTimer);
   if (meMark) {
     meMark.remove();
     meMark = null;
+    meEl = null;
   }
   if (meAcc) {
     meAcc.remove();
     meAcc = null;
   }
+}
+function geoStop() {
+  if (GEO.watch != null) navigator.geolocation.clearWatch(GEO.watch);
+  GEO.watch = null;
+  GEO.follow = false;
+  GEO.fix = GEO.target = GEO.shown = GEO.seg = null;
+  GEO.heading = null;
+  geoClear();
   wakeOff();
   locUi();
+  if (GEO.panned) {
+    GEO.panned = false;
+    map.fire("moveend");
+  }
 }
-function follow(ll, first) {
-  panning = true;
-  if (first) map.setView(ll, Math.max(map.getZoom(), 18), { animate: true });
-  else map.panTo(ll, { animate: true, duration: 0.6, easeLinearity: 0.4, noMoveStart: true });
-  setTimeout(() => {
-    panning = false;
-  }, 700);
+function geoOptions() {
+  const precise = prefs.gpsMode !== "eco";
+  return precise && GEO.high ? { enableHighAccuracy: true, maximumAge: 0, timeout: 15e3 } : { enableHighAccuracy: false, maximumAge: precise ? 5e3 : 15e3, timeout: 3e4 };
+}
+function onFix(p) {
+  const c = p.coords;
+  if (!Number.isFinite(c.latitude) || !Number.isFinite(c.longitude)) return;
+  const fix = { lat: c.latitude, lon: c.longitude, acc: Math.min(Number.isFinite(c.accuracy) ? c.accuracy : 50, 3e3), heading: c.heading, speed: c.speed, t: Date.now() };
+  const prev = GEO.fix;
+  GEO.fix = fix;
+  GEO.lastFixAt = fix.t;
+  if (meEl) meEl.classList.remove("stale");
+  clearTimeout(GEO.staleTimer);
+  GEO.staleTimer = setTimeout(() => {
+    if (meEl) meEl.classList.add("stale");
+  }, 25e3);
+  if (prefs.heading) {
+    if (Number.isFinite(c.heading) && (c.speed == null || c.speed > 0.6)) GEO.heading = c.heading;
+    else if (prev && metersBetween(prev, fix) > 6) GEO.heading = (Math.atan2(fix.lon - prev.lon, fix.lat - prev.lat) * 180 / Math.PI + 360) % 360;
+    else if (c.speed != null && c.speed < 0.3) GEO.heading = null;
+  } else GEO.heading = null;
+  const jitter = Math.max(3, Math.min(fix.acc * 0.35, 12));
+  const moving = c.speed != null && c.speed > 0.8;
+  if (!GEO.target) GEO.target = { lat: fix.lat, lon: fix.lon };
+  else if (moving || metersBetween(GEO.target, fix) > jitter) {
+    const now = performance.now();
+    const from = GEO.shown ? { ...GEO.shown } : { ...GEO.target };
+    const dtFix = prev ? Math.max(200, fix.t - prev.t) : 1e3;
+    GEO.target = { lat: fix.lat, lon: fix.lon };
+    GEO.seg = reduceMotion() ? null : { from, to: GEO.target, t0: now, dur: Math.min(1e3, dtFix * 0.9) };
+    if (!GEO.seg) GEO.shown = { ...GEO.target };
+  }
+  if (fix.acc > 120 && !GEO.weakShown) {
+    GEO.weakShown = true;
+    toast(`Slab\xFD sign\xE1l GPS (\xB1${Math.round(fix.acc)} m). Poloha se zp\u0159esn\xED venku.`);
+  }
+  if (fix.acc < 50) GEO.weakShown = false;
+  if (GEO.first) {
+    GEO.first = false;
+    GEO.shown = { ...GEO.target };
+    meMarker([GEO.shown.lat, GEO.shown.lon]);
+    if (GEO.follow) {
+      const z = Math.max(map.getZoom(), 18);
+      if (z !== map.getZoom()) map.setView([GEO.shown.lat, GEO.shown.lon], z, { animate: !reduceMotion() });
+    }
+    toast(fix.acc > 150 ? `Poloha nalezena, ale nep\u0159esn\u011B (\xB1${Math.round(fix.acc)} m).` : GEO.follow ? "Sleduji tvoji polohu. Mapa jede s tebou." : "Poloha nalezena.");
+  }
+  drawAccuracy(true);
+  ensureLoop();
+}
+var accAt = 0;
+function drawAccuracy(force) {
+  if (!GEO.shown || !GEO.fix) return;
+  const now = performance.now();
+  if (!force && now - accAt < 150) return;
+  accAt = now;
+  const ll = [GEO.shown.lat, GEO.shown.lon];
+  if (!prefs.accCircle) {
+    if (meAcc) {
+      meAcc.remove();
+      meAcc = null;
+    }
+    return;
+  }
+  if (!meAcc) meAcc = L.circle(ll, { renderer: svgSketch, interactive: false, radius: GEO.fix.acc, color: "#007AFF", weight: 1, opacity: 0.35, fillColor: "#007AFF", fillOpacity: 0.1 }).addTo(map);
+  else {
+    meAcc.setLatLng(ll);
+    if (meAcc.getRadius() !== GEO.fix.acc) meAcc.setRadius(GEO.fix.acc);
+  }
+}
+function ensureLoop() {
+  if (!GEO.raf && GEO.watch != null) {
+    GEO.stepAt = 0;
+    GEO.raf = requestAnimationFrame(frame);
+  }
+}
+var lastHeadingCss = "";
+function frame(now) {
+  GEO.raf = 0;
+  if (GEO.watch == null || !GEO.target) return;
+  let busy = false;
+  if (GEO.seg) {
+    const k = Math.min(1, (now - GEO.seg.t0) / GEO.seg.dur), e = 1 - (1 - k) * (1 - k);
+    GEO.shown = { lat: GEO.seg.from.lat + (GEO.seg.to.lat - GEO.seg.from.lat) * e, lon: GEO.seg.from.lon + (GEO.seg.to.lon - GEO.seg.from.lon) * e };
+    if (k >= 1) GEO.seg = null;
+    else busy = true;
+  } else if (!GEO.shown) GEO.shown = { ...GEO.target };
+  const ll = [GEO.shown.lat, GEO.shown.lon];
+  if (!meMark) meMarker(ll);
+  else meMark.setLatLng(ll);
+  drawAccuracy(!busy);
+  if (meEl) {
+    const css = prefs.heading && GEO.heading != null ? `rotate(${Math.round(GEO.heading)}deg)` : "";
+    if (css !== lastHeadingCss) {
+      lastHeadingCss = css;
+      const cone = meEl.querySelector(".cone");
+      cone.style.transform = css;
+      meEl.classList.toggle("has-heading", !!css);
+    }
+  }
+  if (GEO.follow && !GEO.zooming && !map._animatingZoom) busy = followStep(now) || busy;
+  if (busy) GEO.raf = requestAnimationFrame(frame);
+  else if (GEO.panned) {
+    GEO.panned = false;
+    GEO.lastMoveEnd = now;
+    map.fire("moveend");
+  }
+}
+function followStep(now) {
+  if (map._panAnim && map._panAnim._inProgress) map._panAnim.stop();
+  const size = map.getSize();
+  const padB = isDesk() ? 0 : Math.min(size.y * 0.25, 140);
+  const want = L.point(size.x / 2, (size.y - padB) / 2);
+  const cp = map.latLngToContainerPoint([GEO.shown.lat, GEO.shown.lon]);
+  let d = cp.subtract(want);
+  const dist = Math.hypot(d.x, d.y);
+  if (dist < 0.5) return false;
+  if (dist > size.x) {
+    map.setView([GEO.shown.lat, GEO.shown.lon], map.getZoom(), { animate: false });
+    return false;
+  }
+  const dt = Math.min(250, now - (GEO.stepAt || now - 16.7));
+  GEO.stepAt = now;
+  if (!GEO.seg && !reduceMotion()) d = d.multiplyBy(1 - Math.pow(0.82, dt / 16.7));
+  if (map._rawPanBy) {
+    map._rawPanBy(d);
+    map.fire("move");
+  } else map.panBy(d, { animate: false, noMoveStart: true });
+  GEO.panned = true;
+  if (now - GEO.lastMoveEnd > 600) {
+    GEO.lastMoveEnd = now;
+    GEO.panned = false;
+    map.fire("moveend");
+  }
+  return true;
 }
 function geoStart() {
-  geoWatch = navigator.geolocation.watchPosition((p) => {
-    const ll = [p.coords.latitude, p.coords.longitude], acc = Math.min(p.coords.accuracy || 0, 2e3);
-    lastPos = ll;
-    if (!meAcc) meAcc = L.circle(ll, { renderer: svgSketch, interactive: false, radius: acc, color: "#007AFF", weight: 1, opacity: 0.35, fillColor: "#007AFF", fillOpacity: 0.1 }).addTo(map);
-    else meAcc.setLatLng(ll).setRadius(acc);
-    const hd = p.coords.heading, moving = Number.isFinite(hd) && (p.coords.speed == null || p.coords.speed > 0.4);
-    const html = `<span class="me"><i class="halo"></i>${moving ? `<i class="cone" style="transform:rotate(${Math.round(hd)}deg)"></i>` : ""}<i class="dot"></i></span>`;
-    if (!meMark) meMark = L.marker(ll, { interactive: false, keyboard: false, zIndexOffset: 1e3, icon: L.divIcon({ className: "me-wrap", html, iconSize: [64, 64] }) }).addTo(map);
-    else {
-      meMark.setLatLng(ll);
-      const el = meMark.getElement();
-      if (el) el.innerHTML = html;
-    }
-    if (geoFollow) follow(ll, geoFirst);
-    if (geoFirst) {
-      geoFirst = false;
-      toast(acc > 150 ? `Poloha nalezena, ale nep\u0159esn\u011B (\xB1${Math.round(acc)} m).` : "Sleduji tvoji polohu. Mapa jede s tebou.");
-    }
-  }, (err) => {
-    if (err.code === 3 && geoHigh) {
-      geoHigh = false;
-      navigator.geolocation.clearWatch(geoWatch);
+  GEO.watch = navigator.geolocation.watchPosition(onFix, (err) => {
+    if (err.code === 3 && GEO.high && !GEO.fix) {
+      GEO.high = false;
+      navigator.geolocation.clearWatch(GEO.watch);
       geoStart();
       return;
     }
-    if (err.code !== 1 && !geoFirst) return;
+    if (err.code !== 1 && GEO.fix) {
+      if (meEl) meEl.classList.add("stale");
+      return;
+    }
     geoStop();
     geoHelp(err.code);
-  }, { enableHighAccuracy: geoHigh, maximumAge: 5e3, timeout: geoHigh ? 15e3 : 3e4 });
+  }, geoOptions());
 }
+function geoRestart() {
+  if (GEO.watch == null) return;
+  navigator.geolocation.clearWatch(GEO.watch);
+  GEO.high = true;
+  geoStart();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || GEO.watch == null) return;
+  wakeOn();
+  geoRestart();
+  if (GEO.fix && Date.now() - GEO.fix.t > 3e4 && meEl) meEl.classList.add("stale");
+});
+map.on("zoomstart", () => {
+  GEO.zooming = true;
+});
+map.on("zoomend", () => {
+  GEO.zooming = false;
+  if (GEO.follow) ensureLoop();
+});
 map.on("dragstart", () => {
-  if (geoWatch != null && geoFollow && !panning) {
-    geoFollow = false;
+  if (GEO.watch != null && GEO.follow) {
+    GEO.follow = false;
     locUi();
   }
 });
+function resumeFollow() {
+  if (GEO.watch == null) return;
+  GEO.follow = true;
+  locUi();
+  ensureLoop();
+}
+$("#follow-resume").addEventListener("click", resumeFollow);
 function locate() {
-  if (geoWatch != null && !geoFollow) {
-    geoFollow = true;
-    locUi();
-    if (lastPos) follow(lastPos, false);
+  if (GEO.watch != null && !GEO.follow) {
+    resumeFollow();
     return;
   }
-  if (geoWatch != null) {
+  if (GEO.watch != null) {
     geoStop();
     toast("Sledov\xE1n\xED polohy vypnuto.");
     return;
@@ -2882,9 +3296,10 @@ function locate() {
     toast("Poloha funguje jen na adrese za\u010D\xEDnaj\xEDc\xED https://");
     return;
   }
-  geoFirst = true;
-  geoHigh = true;
-  geoFollow = true;
+  GEO.first = true;
+  GEO.high = true;
+  GEO.follow = prefs.autoFollow !== false;
+  GEO.weakShown = false;
   toast("Zji\u0161\u0165uji polohu\u2026");
   geoStart();
   locUi();
@@ -3099,6 +3514,27 @@ function counts() {
   for (const id of B.keys()) if (statusOf(id) === "none") c.none++;
   return c;
 }
+function viewInner() {
+  const vb = map.getBounds();
+  let done = 0, all = 0;
+  for (const b of B.values()) {
+    if (!vb.contains([b.lat, b.lon])) continue;
+    all++;
+    if (statusOf(b.id) === "done") done++;
+  }
+  const pct = all ? Math.round(done / all * 100) : 0;
+  return all ? `<div class="vc"><b>${num(done)}</b><span>z ${num(all)} budov hotovo \xB7 zb\xFDv\xE1 ${num(all - done)}</span></div>
+    <div class="bar" role="progressbar" aria-label="Hotovo ve v\xFD\u0159ezu" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>` : '<p class="hint" style="margin:0">V tomto v\xFD\u0159ezu nejsou na\u010Dten\xE9 \u017E\xE1dn\xE9 budovy.</p>';
+}
+var viewCard = () => card("V tomto v\xFD\u0159ezu mapy", "", `<div id="vcard">${viewInner()}</div>`);
+var vcTimer = 0;
+map.on("moveend", () => {
+  clearTimeout(vcTimer);
+  vcTimer = setTimeout(() => {
+    const el = document.getElementById("vcard");
+    if (el) el.innerHTML = viewInner();
+  }, 700);
+});
 function legendCard() {
   const c = counts();
   return card("Legenda", "", `<ul class="lg">${ORDER.map((k) => `<li data-status="${k}" style="--c:${STATUS[k].color}"><span class="sdot">${svg(STATUS_ICON[k], "")}</span>${STATUS[k].label}<b>${num(c[k])}</b></li>`).join("")}</ul>
@@ -3186,24 +3622,117 @@ function sbConfig() {
   }
   return null;
 }
-function syncCard() {
+var APP_VERSION = "2.0 \xB7 \u0159\xEDjen 2026";
+var tileI = (ico, c) => `<span class="tile" style="--c:${c}">${svg(ico)}</span>`;
+var tgl = (k, label) => `<button type="button" class="toggle ${prefs[k] ? "on" : ""}" data-act="pref" data-k="${k}" role="switch" aria-checked="${!!prefs[k]}" aria-label="${label}"><i></i></button>`;
+var srow = (ico, c, title, sub, right = "") => `<div class="sr">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${right}</div>`;
+var trow = (ico, c, k, title, sub) => srow(ico, c, title, sub, tgl(k, title));
+var seg = (k, opts, label) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map(([v, t]) => `<button type="button" role="radio" aria-checked="${prefs[k] === v}" class="${prefs[k] === v ? "on" : ""}" data-act="pref-set" data-k="${k}" data-v="${v}">${t}</button>`).join("")}</div>`;
+var segrow = (ico, c, k, title, opts, sub) => `<div class="sr col"><div class="sr-top">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span></div>${seg(k, opts, title)}</div>`;
+var linkrow = (ico, c, act, title, val = "", attrs = "") => `<button type="button" class="sr link" data-act="${act}" ${attrs}>${tileI(ico, c)}<span class="sr-t"><b>${title}</b></span>${val ? `<span class="sr-v">${val}</span>` : ""}${svg("chev", "ico sr-chev")}</button>`;
+var kv = (k, v) => `<div class="sr kv"><span>${k}</span><b>${v}</b></div>`;
+var sgroup = (id, title, body, foot) => `<h5 class="sg-h" id="sg-${id}">${title}</h5><div class="sg" data-g="${id}">${body}</div>${foot ? `<p class="sg-f">${foot}</p>` : ""}`;
+var SYNC_TONE = { synced: "ok", syncing: "busy", pending: "busy", offline: "warn", error: "bad", conflict: "bad", local: "", login: "" };
+function syncState() {
   const c = sbConfig();
-  const st = !c ? "local" : !session ? "login" : store.state;
-  const good2 = st === "synced", bad = st === "offline" || st === "conflict";
-  const head = `<div class="card-h"><span class="badge ${good2 ? "ok" : bad ? "warn" : ""}">${svg(good2 ? "cloudok" : bad ? "cloudoff" : "cloud")}</span><div><h4>Synchronizace</h4><small style="color:${good2 ? "var(--s-done)" : bad ? "var(--s-revisit)" : "var(--muted)"}">${esc(SYNC_LABEL[st])}</small></div></div>`;
-  let inner;
-  if (!c) inner = `<p class="meta">Aplikace te\u010F ukl\xE1d\xE1 jen do tohoto za\u0159\xEDzen\xED. Pro synchronizaci p\u0159ipoj Supabase.</p>
-    <label class="field"><span>Project URL</span><input id="sb-url" placeholder="https://xxxx.supabase.co" autocapitalize="off"></label>
-    <label class="field"><span>Ve\u0159ejn\xFD kl\xED\u010D (anon / publishable)</span><input id="sb-key" autocapitalize="off"></label>
-    <p class="hint">Nikdy sem nezad\xE1vej kl\xED\u010D \u201Eservice_role\u201C / \u201Esecret\u201C.</p>
-    <div class="btns" style="margin-top:10px"><button class="tbtn pri" data-act="sb-save">P\u0159ipojit</button></div>`;
-  else if (!session) inner = `<p class="meta">P\u0159ihlas se, a\u0165 se evidence ukl\xE1d\xE1 a propisuje mezi za\u0159\xEDzen\xEDmi.</p>
-    <label class="field"><span>E-mail</span><input id="sb-email" type="email" autocomplete="username" autocapitalize="off"></label>
-    <label class="field"><span>Heslo</span><input id="sb-pass" type="password" autocomplete="current-password"></label>
-    <div class="grid2" style="margin-top:12px"><button class="tbtn pri" data-act="sb-login">${svg("login")}P\u0159ihl\xE1sit</button>${c.fixed ? "" : `<button class="tbtn soft" data-act="sb-forget">Odpojit</button>`}</div>`;
-  else inner = `<p class="meta">P\u0159ihl\xE1\u0161en: <b>${esc(session.user.email)}</b><br>Naposledy: ${store.lastSync ? fmtTime(store.lastSync.toISOString()) : "\u2014"}${store.pending() ? `<br>\u010Cek\xE1 na odesl\xE1n\xED: ${store.pending()} zm\u011Bn` : ""}${store.lastError && st !== "synced" ? '<br><span style="color:var(--s-revisit)">Chyba: ' + esc(store.lastError.message || String(store.lastError)) + "</span>" : ""}</p>
-    <div class="grid2" style="grid-template-columns:1.3fr 1fr"><button class="tbtn pri" data-act="sb-sync">${svg("refresh")}Synchronizovat te\u010F</button><button class="tbtn soft" data-act="sb-logout">${svg("logout")}Odhl\xE1sit</button></div>`;
-  return `<section class="card">${head}${inner}</section>`;
+  return !c ? "local" : !session ? "login" : store.state;
+}
+function errText(e) {
+  const m = String(e && (e.message || e.error_description || e.msg) || e || "");
+  if (!navigator.onLine || /Failed to fetch|NetworkError|Load failed|network/i.test(m)) return "Nejde se spojit se serverem. Zm\u011Bny z\u016Fst\xE1vaj\xED v za\u0159\xEDzen\xED a ode\u0161lou se, a\u017E bude spojen\xED.";
+  if (/JWT|token|401|403|permission|row-level/i.test(m)) return "Server odm\xEDtl p\u0159\xEDstup \u2013 zkus se odhl\xE1sit a znovu p\u0159ihl\xE1sit.";
+  return "Server vr\xE1til chybu: " + m.slice(0, 140);
+}
+function accountGroup() {
+  const c = sbConfig(), st = syncState();
+  if (!c) return sgroup("acct", "\xDA\u010Det a synchronizace", `<div class="sr-pad">
+      <p class="sg-note">Aplikace te\u010F ukl\xE1d\xE1 jen do tohoto za\u0159\xEDzen\xED. Pro synchronizaci p\u0159ipoj Supabase.</p>
+      <label class="field"><span>Project URL</span><input id="sb-url" placeholder="https://xxxx.supabase.co" autocapitalize="off"></label>
+      <label class="field"><span>Ve\u0159ejn\xFD kl\xED\u010D (anon / publishable)</span><input id="sb-key" autocapitalize="off"></label>
+      <p class="hint">Nikdy sem nezad\xE1vej kl\xED\u010D \u201Eservice_role\u201C / \u201Esecret\u201C.</p>
+      <button class="tbtn pri wide" data-act="sb-save" style="margin-top:12px">P\u0159ipojit</button></div>`);
+  if (!session) {
+    return sgroup(
+      "acct",
+      "\xDA\u010Det a synchronizace",
+      `<button type="button" class="acct-row" data-act="login-open"><span class="av empty">${svg("login")}</span><span class="sr-t"><b>P\u0159ihl\xE1sit se</b><small>Evidence se pak propisuje mezi iPhonem, iPadem a Macem.</small></span>${svg("chev", "ico sr-chev")}</button>` + (c.fixed ? "" : linkrow("x", "#8E8E93", "sb-forget", "Odpojit Supabase")),
+      "Dokud se nep\u0159ihl\xE1s\xED\u0161, ukl\xE1d\xE1 se v\u0161e jen do tohoto za\u0159\xEDzen\xED."
+    );
+  }
+  const open = !!state.acctOpen, pend = store.pending();
+  let body = `<button type="button" class="acct-row" data-act="acct-toggle" aria-expanded="${open}"><span class="av">${esc(initials())}</span>
+    <span class="sr-t"><b>${esc(session.user.email || "\xDA\u010Det")}</b><small class="sync-line" data-tone="${SYNC_TONE[st] || ""}"><i></i>${esc(SYNC_LABEL[st])}</small></span>${svg("chev", "ico sr-chev acct-chev")}</button>`;
+  if (open) {
+    body += `<div class="acct-more">${kv("E-mail", esc(session.user.email || "\u2014"))}${kv("P\u0159ipojen\xED", navigator.onLine ? "Online" : "Offline")}${kv("Stav", esc(SYNC_LABEL[st]))}
+      ${kv("Posledn\xED synchronizace", store.lastSync ? fmtTime(store.lastSync.toISOString()) : "Zat\xEDm neprob\u011Bhla")}${kv("Neodeslan\xE9 zm\u011Bny", pend ? `<span class="t-warn">${num(pend)}</span>` : "\u017D\xE1dn\xE9")}
+      ${store.lastError && (st === "error" || st === "offline") ? `<p class="sr-err" role="alert">${esc(errText(store.lastError))}</p>` : ""}
+      <div class="sr-btns">${st === "conflict" ? `<button type="button" class="tbtn pri" data-act="conflicts">Vy\u0159e\u0161it konflikty (${store.conflicts.length})</button>` : `<button type="button" class="tbtn pri" data-act="sb-sync" ${st === "syncing" ? "disabled" : ""}>${svg("refresh")}Synchronizovat te\u010F</button>`}
+      <button type="button" class="tbtn danger" data-act="sb-logout">${svg("logout")}Odhl\xE1sit se</button></div></div>`;
+  }
+  return sgroup("acct", "\xDA\u010Det a synchronizace", body, "Za synchronizovanou se zm\u011Bna pova\u017Euje a\u017E po potvrzen\xED serverem.");
+}
+var gpsGroup = () => sgroup(
+  "gps",
+  "Sledov\xE1n\xED polohy",
+  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost polohy", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "M\xE9n\u011B \u010Dast\xE9 m\u011B\u0159en\xED, \u0161et\u0159\xED baterii. Hod\xED se do auta." : "GPS m\u011B\u0159\xED co nej\u010Dast\u011Bji. Nejlep\u0161\xED p\u0159i ch\u016Fzi od domu k domu.") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy mapa sleduje te\u010Dku.") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Modr\xFD kruh kolem te\u010Dky ukazuje nejistotu m\u011B\u0159en\xED.") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky ukazuje, kam jde\u0161."),
+  "Poloha se m\u011B\u0159\xED jen p\u0159i otev\u0159en\xE9 aplikaci. Prohl\xED\u017Ee\u010D na iPhonu neumo\u017E\u0148uje sledovat polohu na pozad\xED ani p\u0159i zam\u010Den\xE9 obrazovce; b\u011Bhem sledov\xE1n\xED proto z\u016Fst\xE1v\xE1 displej rozsv\xEDcen\xFD (pokud to prohl\xED\u017Ee\u010D um\xED)."
+);
+var mapGroup = () => sgroup(
+  "map",
+  "Mapa a adresy",
+  trow("pointer", "#F93A25", "quick", "Klepnut\xEDm ozna\u010Dit jako rozneseno", "Klepnut\xED na zelenou budovu otev\u0159e detail.") + srow("file", "#FF9500", "Let\xE1k\u016F za budovu", "", `<div class="mini-step"><button type="button" data-act="q-" aria-label="M\xE9n\u011B">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+" aria-label="V\xEDce">+</button></div>`) + trow("home", "#30B651", "icons", "Ikony stavu na budov\xE1ch", "P\u0159i velk\xE9m p\u0159ibl\xED\u017Een\xED.") + trow("road", "#5856D6", "areas", "Ulice a oblasti", "Zobrazit ozna\u010Den\xE9 ulice a obkreslen\xE9 oblasti.") + segrow("layers", "#30B0C7", "basemap", "Podklad mapy", [["osm", "Standardn\xED"], ["light", "Sv\u011Btl\xFD"], ["auto", "Auto"]], "Auto = v tmav\xE9m vzhledu tmav\xE1 mapa.") + srow("dashboard", "#8E8E93", "Barvy stav\u016F", "", `<span class="sdots">${ORDER.map((k) => `<i data-status="${k}" title="${STATUS[k].label}"></i>`).join("")}</span>`) + linkrow("refresh", "#007AFF", "cache-clear", "St\xE1hnout mapov\xE1 data znovu", `${num(B.size)} budov`),
+  "Obrysy budov se dr\u017E\xED v za\u0159\xEDzen\xED " + CFG.cacheDays + " dn\xED, aby se zbyte\u010Dn\u011B nezat\u011B\u017Eovalo Overpass API."
+);
+var lookGroup = () => sgroup(
+  "look",
+  "Vzhled a chov\xE1n\xED",
+  segrow("moon", "#5856D6", "theme", "Vzhled", [["system", "Syst\xE9m"], ["light", "Sv\u011Btl\xFD"], ["dark", "Tmav\xFD"]]) + trow("sparkles", "#FF2D55", "anim", "Animace", "Plynul\xFD pohyb te\u010Dky a mapy, p\u0159echody panel\u016F.") + segrow("rows", "#8E8E93", "density", "Hustota", [["normal", "B\u011B\u017En\xE1"], ["compact", "Kompaktn\xED"]]) + trow("phone", "#34C759", "haptics", "Vibrace p\u0159i ozna\u010Den\xED", "vibrate" in navigator ? "Kr\xE1tk\xE9 cvaknut\xED po klepnut\xED na budovu." : "Tento prohl\xED\u017Ee\u010D vibrace z webu nepodporuje (iPhone).") + trow("map", "#FF9500", "lastView", "Pamatovat posledn\xED m\xEDsto", "Po otev\u0159en\xED se mapa vr\xE1t\xED, kde jsi skon\u010Dil."),
+  "P\u0159i zapnut\xE9m \u201EOmezit pohyb\u201C v syst\xE9mu se animace vyp\xEDnaj\xED automaticky."
+);
+function dataGroup() {
+  const recs = store.all("building_records").length, visits = store.all("visits").length, pend = store.pending();
+  return sgroup(
+    "data",
+    "Data a z\xE1lohy",
+    kv("V za\u0159\xEDzen\xED", `${num(recs)} budov \xB7 ${num(visits)} n\xE1v\u0161t\u011Bv`) + kv("\xDAlo\u017Ei\u0161t\u011B", volatile ? '<span class="t-bad">Neukl\xE1d\xE1 se trvale</span>' : "Trval\xE9") + kv("Neodeslan\xE9 zm\u011Bny", !session ? "Jen v za\u0159\xEDzen\xED" : pend ? `<span class="t-warn">${num(pend)} \u010Dek\xE1</span>` : "\u017D\xE1dn\xE9") + linkrow("database", "#5856D6", "x-backup", "St\xE1hnout \xFAplnou z\xE1lohu") + linkrow("history", "#FF9500", "i-backup", "Obnovit ze z\xE1lohy") + linkrow("updown", "#30B0C7", "go-tab", "Dal\u0161\xED exporty a import", "GeoJSON, CSV", 'data-tab="io"') + '<input id="file" type="file" hidden>',
+    "Obnova ze z\xE1lohy nic nema\u017Ee \u2013 z\xE1znamy se stejn\xFDm identifik\xE1torem aktualizuje, ostatn\xED p\u0159id\xE1."
+  );
+}
+var aboutGroup = () => sgroup(
+  "about",
+  "O aplikaci",
+  kv("Verze", APP_VERSION) + linkrow("help", "#007AFF", "help", "N\xE1pov\u011Bda") + `<div class="sr-pad"><p class="sg-note">Mapa, obrysy budov, adresy a ulice: \xA9 p\u0159isp\u011Bvatel\xE9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (licence ODbL), stahov\xE1no p\u0159es Overpass API; hled\xE1n\xED adres zaji\u0161\u0165uje Nominatim, mapu vykresluje Leaflet${prefs.basemap !== "osm" ? ", sv\u011Btl\xFD a tmav\xFD podklad \xA9 CARTO" : ""}. OpenStreetMap neobsahuje jednotliv\xE9 byty a u n\u011Bkter\xFDch dom\u016F chyb\xED adresa nebo obrys \u2013 takov\xE9 \xFAdaje se dopl\u0148uj\xED ru\u010Dn\u011B.</p></div>`
+);
+var settingsHtml = () => `<div class="set">${accountGroup()}${gpsGroup()}${mapGroup()}${lookGroup()}${dataGroup()}${aboutGroup()}</div>`;
+function showHelp() {
+  modal(`<h2>Jak na to</h2><ol class="help">
+    <li><b>Klepni na budovu</b> \u2013 zezelen\xE1 jako rozneseno. Druh\xFDm klepnut\xEDm otev\u0159e\u0161 detail (vchody, pozn\xE1mka, jin\xFD stav).</li>
+    <li><b>Poloha</b> \u2013 tla\u010D\xEDtko \u201EMoje poloha\u201C zapne sledov\xE1n\xED. Kdy\u017E mapou pohne\u0161 prstem, sledov\xE1n\xED se pozastav\xED; vr\xE1t\xED\u0161 ho tla\u010D\xEDtkem \u201EPokra\u010Dovat ve sledov\xE1n\xED\u201C.</li>
+    <li><b>V\xFDb\u011Br</b> ozna\u010D\xED v\xEDc budov najednou, <b>Ulice</b> a <b>Oblast</b> slou\u017E\xED pro m\xEDsta bez obrys\u016F.</li>
+    <li><b>Synchronizace</b> \u2013 po p\u0159ihl\xE1\u0161en\xED se v\u0161e propisuje mezi za\u0159\xEDzen\xEDmi. Bez sign\xE1lu se zm\u011Bny ukl\xE1daj\xED do telefonu a ode\u0161lou se pozd\u011Bji.</li>
+    <li><b>Z\xE1lohy</b> \u2013 v Nastaven\xED \u2192 Data a z\xE1lohy si m\u016F\u017Ee\u0161 kdykoli st\xE1hnout celou evidenci.</li></ol>
+    <div class="btns"><button class="btn pri" data-m="x">Rozum\xEDm</button></div>`, { x: closeModal });
+}
+function applyPref(k) {
+  if (k === "gpsMode") geoRestart();
+  else if (k === "autoFollow") {
+    if (GEO.watch != null) {
+      if (prefs.autoFollow) resumeFollow();
+      else {
+        GEO.follow = false;
+        locUi();
+      }
+    }
+  } else if (k === "accCircle") drawAccuracy(true);
+  else if (k === "heading") {
+    if (!prefs.heading) GEO.heading = null;
+    ensureLoop();
+  } else if (["anim", "theme", "density", "basemap"].includes(k)) applyLook();
+  else if (k === "icons") updateIcons();
+  else if (k === "areas") {
+    for (const a of store.all("areas")) drawArea(a.id);
+  } else if (k === "quick") toast(prefs.quick ? "Klepnut\xED na budovu ji rovnou ozna\u010D\xED." : "Klepnut\xED na budovu otev\u0159e detail.");
+  if (["gpsMode", "basemap"].includes(k) && !state.sel) softRender();
 }
 var quickCard = () => card("Klepnut\xED na budovu", "pointer", `<div class="qrow">
     <div><b>Rovnou ozna\u010Dit jako rozneseno</b><small>Klepnut\xED obarv\xED budovu zelen\u011B. Klepnut\xEDm na zelenou budovu otev\u0159e\u0161 detail.</small></div>
@@ -3220,11 +3749,10 @@ var importCard = () => card("Import dat", "upload", `<div class="grid2">
 var mapDataCard = () => card("Mapov\xE1 data", "map", `<p class="meta" style="margin-bottom:4px">Na\u010Dteno budov: <b>${num(B.size)}</b></p>
   <p class="hint" style="margin:0 0 12px">Obrysy se dr\u017E\xED v za\u0159\xEDzen\xED ${CFG.cacheDays} dn\xED, aby se zbyte\u010Dn\u011B nezat\u011B\u017Eovalo Overpass API.</p>
   <button class="tbtn wide" data-act="cache-clear">${svg("refresh")}St\xE1hnout mapov\xE1 data znovu</button>`);
-var aboutCard = () => card("O datech", "info", `<p class="hint" style="margin:0">Mapa, obrysy budov, adresy a ulice: \xA9 p\u0159isp\u011Bvatel\xE9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (licence ODbL), stahov\xE1no p\u0159es Overpass API; hled\xE1n\xED adres zaji\u0161\u0165uje Nominatim. OpenStreetMap neobsahuje jednotliv\xE9 byty a u n\u011Bkter\xFDch dom\u016F chyb\xED adresa nebo obrys \u2013 takov\xE9 \xFAdaje se dopl\u0148uj\xED ru\u010Dn\u011B.</p>`);
 var isDesk = () => window.innerWidth > 820;
 var SECTIONS = [
   [{ t: "stats", label: "P\u0159ehled", ico: "dashboard", c: "#007AFF" }, { t: "charts", label: "Statistiky", ico: "chart", c: "#5856D6" }],
-  [{ t: "map", label: "Mapa a zna\u010Den\xED", ico: "map", c: "#34C759" }, { t: "list", label: "Z\xE1znamy", ico: "list", c: "#FF9500" }],
+  [{ t: "map", label: "Mapa", ico: "map", c: "#34C759" }, { t: "list", label: "Z\xE1znamy", ico: "list", c: "#FF9500" }],
   [{ t: "io", label: "Export a import", ico: "updown", c: "#30B0C7" }, { t: "settings", label: "Nastaven\xED", ico: "settings", c: "#8E8E93" }]
 ];
 function rowValue(t) {
@@ -3236,7 +3764,7 @@ function rowValue(t) {
   }
   if (t === "map") return num(B.size) + " budov";
   if (t === "list") return num(store.all("building_records").length + store.all("areas").length);
-  if (t === "settings") return session ? store.state === "synced" ? "Ulo\u017Eeno" : SYNC_LABEL[store.state] : sbConfig() ? "Nep\u0159ihl\xE1\u0161en" : "Jen v za\u0159\xEDzen\xED";
+  if (t === "settings") return session ? SYNC_SHORT[store.state] || "" : sbConfig() ? "Nep\u0159ihl\xE1\u0161en" : "Jen v za\u0159\xEDzen\xED";
   return "";
 }
 function initials() {
@@ -3322,10 +3850,10 @@ try {
 var VIEWS = {
   stats: overviewHtml,
   list: listHtml,
-  map: () => quickCard() + legendCard() + mapDataCard(),
+  map: () => viewCard() + quickCard() + legendCard() + mapDataCard(),
   charts: chartsHtml,
   io: () => exportCard() + importCard(),
-  settings: () => syncCard() + aboutCard()
+  settings: settingsHtml
 };
 $("#tabs").addEventListener("click", (e) => {
   const b = e.target.closest("button");
@@ -3390,6 +3918,48 @@ $("#panel-body").addEventListener("click", (e) => {
       break;
     case "acc-open":
       if (state.tab !== "settings") toggleSection("settings");
+      break;
+    case "pref": {
+      const k = t.dataset.k;
+      prefs[k] = !prefs[k];
+      savePrefs();
+      t.classList.toggle("on", prefs[k]);
+      t.setAttribute("aria-checked", String(prefs[k]));
+      applyPref(k);
+      break;
+    }
+    case "pref-set": {
+      const k = t.dataset.k;
+      if (prefs[k] === t.dataset.v) break;
+      prefs[k] = t.dataset.v;
+      savePrefs();
+      t.parentElement.querySelectorAll("button").forEach((x) => {
+        const on = x === t;
+        x.classList.toggle("on", on);
+        x.setAttribute("aria-checked", String(on));
+      });
+      applyPref(k);
+      break;
+    }
+    case "acct-toggle":
+      state.acctOpen = !state.acctOpen;
+      renderPanel();
+      break;
+    case "login-open":
+      openLogin("login");
+      break;
+    case "help":
+      showHelp();
+      break;
+    case "conflicts":
+      showConflict();
+      break;
+    case "go-tab":
+      if (isDesk()) toggleSection(t.dataset.tab);
+      else {
+        state.tab = t.dataset.tab;
+        renderPanel();
+      }
       break;
     case "back":
       select(null);
@@ -3548,16 +4118,15 @@ $("#panel-body").addEventListener("click", (e) => {
       renderSync();
       renderPanel();
       break;
-    case "sb-login":
-      sb.auth.signInWithPassword({ email: $("#sb-email").value.trim(), password: $("#sb-pass").value }).then(({ error }) => {
-        if (error) toast("P\u0159ihl\xE1\u0161en\xED se nepovedlo: " + error.message);
-      });
-      break;
     case "sb-logout":
-      sb.auth.signOut();
+      logout();
       break;
     case "sb-sync":
-      store.sync().then(renderPanel);
+      if (!navigator.onLine) toast("Jsi offline \u2013 zm\u011Bny se ode\u0161lou, a\u017E bude sign\xE1l.");
+      store.sync().then(() => {
+        if (store.state === "synced") toast("Synchronizov\xE1no.");
+        renderPanel();
+      });
       break;
     case "x-geojson":
       download("rozvezto-letaky.geojson", JSON.stringify(exportGeoJSON()), "application/geo+json");
@@ -3856,25 +4425,29 @@ function csvVisits() {
   }
   return rows.join("\r\n");
 }
-var SYNC_LABEL = { local: volatile ? "Neukl\xE1d\xE1 se!" : "Jen v tomto za\u0159\xEDzen\xED", synced: "Ulo\u017Eeno", syncing: "Synchronizuji\u2026", pending: "\u010Cek\xE1 na odesl\xE1n\xED", offline: "Offline \u2013 ulo\u017Eeno v za\u0159\xEDzen\xED", conflict: "Konflikt \u2013 vy\u0159e\u0161it", login: "P\u0159ihl\xE1sit" };
+var SYNC_LABEL = { local: volatile ? "Neukl\xE1d\xE1 se!" : "Jen v tomto za\u0159\xEDzen\xED", synced: "Synchronizov\xE1no", syncing: "Prob\xEDh\xE1 synchronizace", pending: "\u010Cek\xE1 na synchronizaci", offline: "Offline", error: "Chyba synchronizace", conflict: "Konflikt \u2013 vy\u0159e\u0161it", login: "Nep\u0159ihl\xE1\u0161en" };
+var SYNC_SHORT = { synced: "Ulo\u017Eeno", syncing: "Ukl\xE1d\xE1m", pending: "\u010Cek\xE1", offline: "Offline", error: "Chyba", conflict: "Konflikt" };
 function renderSync() {
   const s = sb && !session ? "login" : store.state;
   const el = $("#sync");
   el.dataset.s = s;
   el.title = SYNC_LABEL[s];
-  el.querySelector("b").textContent = s === "synced" ? "Synchronizov\xE1no" : SYNC_LABEL[s];
-  el.querySelector("small").textContent = store.lastSync && session ? "naposledy " + fmtTime(store.lastSync.toISOString()) : s === "login" ? "evidence se nesd\xEDl\xED" : "";
+  el.querySelector("b").textContent = s === "login" ? "P\u0159ihl\xE1sit se" : SYNC_LABEL[s];
+  el.querySelector("small").textContent = s === "offline" ? "zm\u011Bny \u010Dekaj\xED v za\u0159\xEDzen\xED" : s === "error" ? "zkus\xEDm to znovu" : store.lastSync && session ? "naposledy " + fmtTime(store.lastSync.toISOString()) : s === "login" ? "evidence se nesd\xEDl\xED" : "";
   const av = $("#avatar");
   if (session && session.user && session.user.email) {
-    const parts = session.user.email.split("@")[0].split(/[._-]+/).filter(Boolean);
-    av.textContent = ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+    av.textContent = initials();
     av.title = session.user.email;
   } else {
     av.textContent = "?";
-    av.title = "P\u0159ihl\xE1sit";
+    av.title = "P\u0159ihl\xE1sit se";
   }
 }
 $("#avatar").addEventListener("click", () => {
+  if (sb && !session) {
+    openLogin("login");
+    return;
+  }
   if (isDesk()) setSide(true);
   openSection("settings");
 });
@@ -3884,9 +4457,249 @@ $("#sync").addEventListener("click", () => {
     return;
   }
   if (session) store.sync();
+  state.acctOpen = true;
   if (isDesk()) setSide(true);
   openSection("settings");
 });
+var LOGIN = { mode: "login", busy: false, apple: false, email: "", err: "" };
+var appUrl = () => location.origin + location.pathname;
+var loginOpen = () => !$("#login").hidden;
+var loginLater = () => {
+  try {
+    return sessionStorage.getItem("rzt-login-later") === "1";
+  } catch (e) {
+    return false;
+  }
+};
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function loginHtml() {
+  const m = LOGIN.mode;
+  const T = {
+    login: ["P\u0159ihl\xE1\u0161en\xED", "P\u0159ihlas se ke sv\xE9mu \xFA\u010Dtu. Evidence roznosu se pak propisuje mezi iPhonem, iPadem a Macem.", "P\u0159ihl\xE1sit se"],
+    reset: ["Zapomenut\xE9 heslo", "Zadej e-mail \xFA\u010Dtu. Po\u0161leme ti odkaz, p\u0159es kter\xFD si nastav\xED\u0161 nov\xE9 heslo.", "Poslat odkaz"],
+    sent: ["Zkontroluj e-mail", `Pokud \xFA\u010Det ${esc(LOGIN.email)} existuje, poslali jsme na n\u011Bj odkaz pro nastaven\xED nov\xE9ho hesla. Otev\u0159i ho na tomhle za\u0159\xEDzen\xED.`, "Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED"],
+    recovery: ["Nov\xE9 heslo", "Zvol si nov\xE9 heslo k \xFA\u010Dtu. Pak bude\u0161 rovnou p\u0159ihl\xE1\u0161en.", "Ulo\u017Eit heslo"]
+  }[m];
+  const logo2 = $("#logo").getAttribute("src");
+  const email = m === "login" || m === "reset";
+  const pass = m === "login" || m === "recovery";
+  return `<div class="lg-card glass" role="dialog" aria-modal="true" aria-labelledby="lg-title">
+    ${m !== "recovery" ? `<button type="button" class="lg-x" data-lg="later" aria-label="Zav\u0159\xEDt">${svg("x")}</button>` : ""}
+    <div class="lg-head"><img class="lg-logo" src="${logo2}" alt="Rozvez.to"><h2 id="lg-title">${T[0]}</h2><p>${T[1]}</p></div>
+    <form id="lg-form" novalidate>
+      ${email || pass ? `<div class="lg-fields">
+        ${email ? `<label class="lg-f"><span>E-mail</span><input id="lg-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="jmeno@email.cz" value="${esc(LOGIN.email)}"></label>` : ""}
+        ${pass ? `<label class="lg-f pw"><span>${m === "recovery" ? "Nov\xE9 heslo" : "Heslo"}</span><input id="lg-pass" type="password" autocomplete="${m === "recovery" ? "new-password" : "current-password"}" placeholder="${m === "recovery" ? "Alespo\u0148 8 znak\u016F" : "Heslo"}"><button type="button" class="lg-eye" data-lg="eye" aria-label="Zobrazit heslo" aria-pressed="false">${svg("eye")}</button></label>` : ""}
+      </div>` : ""}
+      <p class="lg-err" id="lg-err" role="alert" ${LOGIN.err ? "" : "hidden"}>${esc(LOGIN.err)}</p>
+      <button class="lg-submit" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">${T[2]}</span></button>
+    </form>
+    ${m === "login" ? `<button type="button" class="lg-link" data-lg="reset">Zapomenut\xE9 heslo?</button>` : ""}
+    ${m === "reset" ? `<button type="button" class="lg-link" data-lg="back">Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED</button>` : ""}
+    ${m === "login" && LOGIN.apple ? `<div class="lg-or"><span>nebo</span></div><button type="button" class="lg-apple" data-lg="apple">Pokra\u010Dovat s Apple</button>` : ""}
+    ${m !== "recovery" ? `<button type="button" class="lg-later" data-lg="later">Te\u010F ne \u2013 pracovat jen v tomto za\u0159\xEDzen\xED</button>` : ""}
+  </div>`;
+}
+function renderLogin() {
+  const el = $("#login");
+  el.innerHTML = loginHtml();
+  const em = el.querySelector("#lg-email"), pw = el.querySelector("#lg-pass");
+  const f = em && !em.value ? em : pw || em || el.querySelector(".lg-submit");
+  if (f && !matchMedia("(pointer: coarse)").matches) setTimeout(() => f.focus(), 60);
+}
+function openLogin(mode = "login", err = "") {
+  if (!sb) {
+    openSection("settings");
+    return;
+  }
+  LOGIN.mode = mode;
+  LOGIN.err = err;
+  LOGIN.busy = false;
+  renderLogin();
+  $("#login").hidden = false;
+  document.documentElement.classList.add("lg-on");
+}
+function closeLogin(later) {
+  if (later) try {
+    sessionStorage.setItem("rzt-login-later", "1");
+  } catch (e) {
+  }
+  $("#login").hidden = true;
+  $("#login").innerHTML = "";
+  document.documentElement.classList.remove("lg-on");
+}
+function lgErr(msg, field) {
+  LOGIN.err = msg;
+  const p = $("#lg-err");
+  if (p) {
+    p.textContent = msg;
+    p.hidden = !msg;
+  }
+  $("#login").querySelectorAll(".lg-f").forEach((x) => x.classList.remove("bad"));
+  if (field) {
+    field.closest(".lg-f").classList.add("bad");
+    field.setAttribute("aria-invalid", "true");
+    field.focus();
+  }
+}
+function lgBusy(on) {
+  LOGIN.busy = on;
+  const b = $("#login .lg-submit");
+  if (b) {
+    b.disabled = on;
+    b.classList.toggle("busy", on);
+    b.setAttribute("aria-busy", String(on));
+  }
+  $("#login").querySelectorAll("input").forEach((x) => {
+    x.readOnly = on;
+  });
+}
+function authErr(err) {
+  const m = String(err && (err.message || err.error_description) || err || ""), code = err && err.code, st = err && err.status;
+  if (code === "invalid_credentials" || /Invalid login credentials/i.test(m)) return "Nespr\xE1vn\xFD e-mail nebo heslo.";
+  if (code === "email_not_confirmed" || /Email not confirmed/i.test(m)) return "E-mail je\u0161t\u011B nen\xED potvrzen\xFD. Otev\u0159i odkaz z potvrzovac\xEDho e-mailu.";
+  if (st === 429 || /rate limit|too many/i.test(m)) return "P\u0159\xEDli\u0161 mnoho pokus\u016F. Po\u010Dkej chv\xEDli a zkus to znovu.";
+  if (code === "same_password" || /different from the old/i.test(m)) return "Nov\xE9 heslo mus\xED b\xFDt jin\xE9 ne\u017E p\u016Fvodn\xED.";
+  if (code === "weak_password" || /at least|weak/i.test(m)) return "Heslo je p\u0159\xEDli\u0161 slab\xE9 \u2013 zvol del\u0161\xED.";
+  if (/expired|invalid.*(link|token)|otp/i.test(m)) return "Odkaz u\u017E vypr\u0161el nebo byl pou\u017Eit. Po\u017E\xE1dej o nov\xFD.";
+  if (!navigator.onLine || /Failed to fetch|NetworkError|Load failed|fetch/i.test(m) || err && err.name === "AuthRetryableFetchError") return "Nejde se spojit se serverem. Zkontroluj p\u0159ipojen\xED a zkus to znovu.";
+  return "Nepovedlo se: " + m.slice(0, 160);
+}
+async function loginSubmit(e) {
+  e.preventDefault();
+  if (LOGIN.busy || !sb) return;
+  const m = LOGIN.mode;
+  if (m === "sent") {
+    LOGIN.mode = "login";
+    LOGIN.err = "";
+    renderLogin();
+    return;
+  }
+  const em = $("#lg-email"), pw = $("#lg-pass");
+  const email = em ? em.value.trim() : "";
+  if (em) LOGIN.email = email;
+  lgErr("");
+  if (em && !EMAIL_RE.test(email)) {
+    lgErr(email ? "Zadej platn\xFD e-mail, nap\u0159. jmeno@email.cz." : "Vypl\u0148 e-mail.", em);
+    return;
+  }
+  if (m === "login" && !pw.value) {
+    lgErr("Vypl\u0148 heslo.", pw);
+    return;
+  }
+  if (m === "recovery" && pw.value.length < 8) {
+    lgErr("Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F.", pw);
+    return;
+  }
+  if (!navigator.onLine) {
+    lgErr("Jsi offline. P\u0159ihl\xE1\u0161en\xED pot\u0159ebuje internet.");
+    return;
+  }
+  lgBusy(true);
+  try {
+    let r;
+    if (m === "login") r = await sb.auth.signInWithPassword({ email, password: pw.value });
+    else if (m === "reset") r = await sb.auth.resetPasswordForEmail(email, { redirectTo: appUrl() });
+    else r = await sb.auth.updateUser({ password: pw.value });
+    if (r && r.error) throw r.error;
+    lgBusy(false);
+    if (m === "reset") {
+      LOGIN.mode = "sent";
+      LOGIN.err = "";
+      renderLogin();
+      return;
+    }
+    closeLogin();
+    toast(m === "login" ? "P\u0159ihl\xE1\u0161eno. Synchronizuji\u2026" : "Heslo zm\u011Bn\u011Bno. Jsi p\u0159ihl\xE1\u0161en.");
+  } catch (err) {
+    lgBusy(false);
+    lgErr(authErr(err), m === "reset" ? em : pw);
+  }
+}
+$("#login").addEventListener("submit", (e) => {
+  if (e.target.id === "lg-form") loginSubmit(e);
+});
+$("#login").addEventListener("input", (e) => {
+  const f = e.target.closest(".lg-f");
+  if (f && f.classList.contains("bad")) {
+    f.classList.remove("bad");
+    e.target.removeAttribute("aria-invalid");
+  }
+});
+$("#login").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-lg]");
+  if (!b) return;
+  const k = b.dataset.lg, em = $("#lg-email");
+  if (em) LOGIN.email = em.value.trim();
+  if (k === "eye") {
+    const i = $("#lg-pass"), show = i.type === "password";
+    i.type = show ? "text" : "password";
+    b.setAttribute("aria-pressed", String(show));
+    b.setAttribute("aria-label", show ? "Skr\xFDt heslo" : "Zobrazit heslo");
+    b.innerHTML = svg(show ? "eyeoff" : "eye");
+    i.focus();
+  } else if (k === "reset") {
+    LOGIN.mode = "reset";
+    LOGIN.err = "";
+    renderLogin();
+  } else if (k === "back") {
+    LOGIN.mode = "login";
+    LOGIN.err = "";
+    renderLogin();
+  } else if (k === "later") closeLogin(true);
+  else if (k === "apple" && !LOGIN.busy) {
+    lgBusy(true);
+    const { error } = await sb.auth.signInWithOAuth({ provider: "apple", options: { redirectTo: appUrl() } });
+    if (error) {
+      lgBusy(false);
+      lgErr(authErr(error));
+    }
+  }
+});
+async function detectApple(c) {
+  try {
+    const r = await fetch(c.url.replace(/\/+$/, "") + "/auth/v1/settings", { headers: { apikey: c.key } });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!(j && j.external && j.external.apple === true);
+  } catch (e) {
+    return false;
+  }
+}
+async function logout() {
+  if (!sb) return;
+  const out = async () => {
+    closeModal();
+    const { error } = await sb.auth.signOut();
+    if (error && session) {
+      toast(authErr(error) + " Odhl\xE1\u0161en\xED se nedokon\u010Dilo.");
+      return;
+    }
+    state.acctOpen = false;
+    toast("Odhl\xE1\u0161eno. Evidence z\u016Fst\xE1v\xE1 v tomto za\u0159\xEDzen\xED.");
+  };
+  const pend = store.pending();
+  if (!pend) {
+    out();
+    return;
+  }
+  modal(`<h2>Neodeslan\xE9 zm\u011Bny</h2><p>V tomto za\u0159\xEDzen\xED ${pend === 1 ? "je 1 zm\u011Bna, kter\xE1 je\u0161t\u011B nen\xED" : `je ${num(pend)} zm\u011Bn, kter\xE9 je\u0161t\u011B nejsou`} na serveru. Kdy\u017E se odhl\xE1s\xED\u0161, z\u016Fstanou ulo\u017Een\xE9 tady a ode\u0161lou se po dal\u0161\xEDm p\u0159ihl\xE1\u0161en\xED.</p>
+    <div class="btns"><button class="btn pri" data-m="sync">Odeslat a odhl\xE1sit</button><button class="btn" data-m="out">Odhl\xE1sit i tak</button><button class="btn" data-m="x">Zru\u0161it</button></div>`, {
+    sync: async () => {
+      closeModal();
+      toast("Odes\xEDl\xE1m zm\u011Bny\u2026");
+      await store.sync();
+      if (store.pending()) {
+        toast("Zm\u011Bny se nepoda\u0159ilo odeslat \u2013 z\u016Fst\xE1vaj\xED v za\u0159\xEDzen\xED. Zkus to, a\u017E bude sign\xE1l.");
+        renderPanel();
+        return;
+      }
+      out();
+    },
+    out,
+    x: closeModal
+  });
+}
 function describe(table, row) {
   if (!row || row.deleted) return "smaz\xE1no";
   const s = STATUS[row.status] ? STATUS[row.status].label : "";
@@ -3949,7 +4762,16 @@ async function initSupabase() {
     renderSync();
     return;
   }
-  sb = window.supabase.createClient(c.url, c.key, { auth: { persistSession: true, autoRefreshToken: true } });
+  let hashErr = "";
+  try {
+    const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+    if (h.get("error_description") || h.get("error")) {
+      hashErr = authErr({ message: h.get("error_description") || h.get("error"), code: h.get("error_code") });
+      history.replaceState(null, "", appUrl());
+    }
+  } catch (e) {
+  }
+  sb = window.supabase.createClient(c.url, c.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   const apply = (s) => {
     const was = session && session.user.id;
     session = s;
@@ -3961,14 +4783,29 @@ async function initSupabase() {
     renderSync();
     if (["map", "settings"].includes(state.tab) && !state.sel) softRender();
   };
-  sb.auth.onAuthStateChange((_e, s) => setTimeout(() => apply(s), 0));
+  sb.auth.onAuthStateChange((ev, s) => setTimeout(() => {
+    apply(s);
+    if (ev === "PASSWORD_RECOVERY") openLogin("recovery");
+  }, 0));
   try {
     apply((await sb.auth.getSession()).data.session);
   } catch (e) {
     console.warn(e);
     renderSync();
   }
+  detectApple(c).then((v) => {
+    LOGIN.apple = v;
+    if (loginOpen() && LOGIN.mode === "login" && !LOGIN.busy) renderLogin();
+  });
+  if (hashErr) openLogin(session ? "reset" : "login", hashErr);
+  else if (!session && !loginLater() && !loginOpen()) openLogin("login");
 }
+window.addEventListener("offline", () => {
+  if (store.remote) {
+    store.offline = true;
+    store.updateState();
+  }
+});
 window.addEventListener("online", () => store.sync());
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) store.sync();
@@ -3995,6 +4832,10 @@ window.addEventListener("error", (e) => {
 window.addEventListener("unhandledrejection", (e) => crash(e.reason));
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (loginOpen()) {
+    if (LOGIN.mode !== "recovery") closeLogin(true);
+    return;
+  }
   if (!$("#modal").hidden) closeModal();
   else if (state.mode !== "browse") setMode("browse");
   else $("#search-results").hidden = true;
@@ -4063,7 +4904,7 @@ window.addEventListener("resize", () => {
     renderPanel();
   }
 });
-window.__rzt = { store, map, B, state, overpass, openTab: (t) => {
+window.__rzt = { store, map, B, state, overpass, prefs, geo: () => ({ fix: GEO.fix, target: GEO.target, shown: GEO.shown, follow: GEO.follow, watch: GEO.watch, raf: GEO.raf, heading: GEO.heading }), openTab: (t) => {
   if (state.tab !== t) openSection(t);
 } };
 </script>
