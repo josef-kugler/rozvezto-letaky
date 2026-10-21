@@ -979,11 +979,11 @@ button:active { transform: scale(.97); }
   #panel { display: block; background: var(--bg-side); border-right: 1px solid var(--line); overflow: hidden; }
   #tabs { display: none; }
   #panel-body { height: 100%; width: var(--side-w); background: transparent; padding: 18px 16px 40px; gap: 22px; }
-  .acct { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border: 0; border-radius: 22px; background: var(--card); text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-  .acct .av { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, #FFB36B, var(--accent)); color: #fff; font-weight: 700; font-size: 19px; }
+  .acct { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 0; border-radius: 22px; background: var(--card); text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .acct .av { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, #FFB36B, var(--accent)); color: #fff; font-weight: 700; font-size: 16px; }
   .acct-t { flex: 1; min-width: 0; }
-  .acct-t b { display: block; font-size: 16.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .acct-t small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .acct-t b { display: block; font-size: 15.5px; font-weight: 600; overflow-wrap: anywhere; }
+  .acct-t small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 1px; }
   .acct .acc-chev { transform: rotate(-90deg); color: var(--faint, rgba(60,60,67,.3)); }
   .sgroup, .acct { flex: none; }
   .sgroup { background: var(--card); border-radius: 22px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
@@ -1093,35 +1093,37 @@ button:active { transform: scale(.97); }
 .me-wrap.stale .me .dot { background: #8E8E93; }
 .me-wrap.stale .me .halo { display: none; }
 .me-wrap.stale .me .cone { opacity: .4; }
-#follow-resume { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 1050; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; font-size: 14.5px; white-space: nowrap; box-shadow: 0 8px 24px rgba(249,58,37,.35), 0 1px 2px rgba(0,0,0,.1); }
-#follow-resume .ico { width: 20px; height: 20px; }
-#follow-resume:active { transform: translateX(-50%) scale(.97); }
+#follow-resume { position: absolute; top: 43px; right: 126px; z-index: 1001; display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 11px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; font-size: 14px; white-space: nowrap; box-shadow: 0 4px 14px rgba(249,58,37,.32); }
+#follow-resume::after { content: ''; position: absolute; inset: -4px; } /* dotyková plocha 48 px */
+#follow-resume .ico { width: 17px; height: 17px; stroke-width: 2.2; }
+#follow-resume:active { transform: scale(.96); }
 @media (max-width: 820px) {
-  #follow-resume { bottom: calc(var(--tabbar) + var(--safe-b) + 98px); }
+  #follow-resume { top: 19px; right: 80px; height: 40px; }
   #panel.open ~ #map-wrap #follow-resume { opacity: 0; pointer-events: none; }
 }
 
 /* ============ Nastavení: seskupené seznamy ============ */
 .set { display: flex; flex-direction: column; min-width: 0; }
-.sg-h { margin: 22px 16px 8px; font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.sg-h { margin: 18px 16px 6px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
 .set > .sg-h:first-child { margin-top: 4px; }
 .sg { background: var(--card); border-radius: 22px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-.sg-f { margin: 8px 16px 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
-.sr { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 9px 14px; width: 100%; border: 0; background: none; text-align: left; color: var(--ink); font-size: 15px; border-radius: 0; }
-.sr + .sr::before, .sg > * + .sr::before, .acct-more::before { content: ''; position: absolute; top: 0; left: 58px; right: 0; height: 1px; background: var(--line); }
+.sg-f { margin: 6px 16px 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.sg-f:empty { display: none; }
+.sr { position: relative; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 7px 14px; width: 100%; border: 0; background: none; text-align: left; color: var(--ink); font-size: 15px; border-radius: 0; }
+.sr + .sr::before, .sg > * + .sr::before, .acct-more::before { content: ''; position: absolute; top: 0; left: 54px; right: 0; height: 1px; background: var(--line); }
 .sr.kv + .sr::before, .sr + .sr.kv::before, .sr.kv::before { left: 16px; }
-.sr .tile { width: 30px; height: 30px; border-radius: 8px; background: var(--c); color: #fff; display: grid; place-items: center; flex: none; }
-.sr .tile .ico { width: 18px; height: 18px; stroke-width: 2.2; }
+.sr .tile { width: 28px; height: 28px; border-radius: 8px; background: var(--c); color: #fff; display: grid; place-items: center; flex: none; }
+.sr .tile .ico { width: 17px; height: 17px; stroke-width: 2.2; }
 .sr-t { flex: 1; min-width: 0; }
-.sr-t b { display: block; font-weight: 500; font-size: 15.5px; line-height: 1.3; }
-.sr-t small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+.sr-t b { display: block; font-weight: 500; font-size: 15px; line-height: 1.3; }
+.sr-t small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; margin-top: 1px; }
 .sr-v { color: var(--muted); font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sr-chev { width: 18px; height: 18px; flex: none; color: var(--faint); transform: rotate(-90deg); }
 .sr.link:hover, .acct-row:hover { background: rgba(118,118,128,.06); }
 .sr.link:active, .acct-row:active { transform: none; background: rgba(118,118,128,.12); }
-.sr.col { flex-direction: column; align-items: stretch; gap: 10px; }
+.sr.col { flex-direction: column; align-items: stretch; gap: 8px; padding-top: 9px; padding-bottom: 10px; }
 .sr-top { display: flex; align-items: center; gap: 12px; }
-.sr.kv { min-height: 46px; padding: 10px 16px; justify-content: space-between; gap: 16px; }
+.sr.kv { min-height: 40px; padding: 8px 16px; justify-content: space-between; gap: 16px; font-size: 14.5px; }
 .sr.kv span { color: var(--ink); white-space: nowrap; flex: none; }
 .sr.kv b { font-weight: 500; color: var(--muted); text-align: right; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .sr-pad { padding: 14px 16px 16px; }
@@ -1129,17 +1131,19 @@ button:active { transform: scale(.97); }
 .t-warn { color: var(--s-partial) !important; font-weight: 600 !important; }
 .t-bad { color: var(--s-revisit) !important; font-weight: 600 !important; }
 .seg { display: flex; padding: 2px; border-radius: 10px; background: var(--soft); gap: 2px; }
-.seg button { flex: 1 1 0; min-width: 0; height: 34px; padding: 0 6px; border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg.in { flex: none; }
+.seg.in button { flex: none; padding: 0 11px; }
+.seg button { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 6px; border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seg button.on { background: var(--card); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 1px 1px rgba(0,0,0,.04); }
 .seg button:active { transform: none; }
 .seg button:focus-visible, .toggle:focus-visible, .sr.link:focus-visible, .acct-row:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; }
 .sdots { display: flex; gap: 6px; }
 .sdots i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
-.acct-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 76px; padding: 12px 16px; border: 0; background: none; text-align: left; color: var(--ink); border-radius: 0; }
-.acct-row .av, .acct .av { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, #FFB36B, var(--accent)); color: #fff; font-weight: 700; font-size: 18px; }
+.acct-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 9px 14px; border: 0; background: none; text-align: left; color: var(--ink); border-radius: 0; }
+.acct-row .av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; background: linear-gradient(135deg, #FFB36B, var(--accent)); color: #fff; font-weight: 700; font-size: 15px; }
 .acct-row .av.empty { background: var(--accent-tint); color: var(--accent); }
-.acct-row .av .ico { width: 24px; height: 24px; }
-.acct-row .sr-t b { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.acct-row .av .ico { width: 20px; height: 20px; }
+.acct-row .sr-t b { font-size: 15.5px; font-weight: 600; overflow-wrap: anywhere; }
 .acct-chev { transition: transform .3s var(--ease); }
 .acct-row[aria-expanded="true"] .acct-chev { transform: rotate(0deg); color: var(--accent); }
 .sync-line { display: flex !important; align-items: center; gap: 6px; }
@@ -1151,7 +1155,6 @@ button:active { transform: scale(.97); }
 .sync-line[data-tone=bad] { color: var(--s-revisit) !important; }
 .acct-more { position: relative; }
 .sr-err { margin: 4px 16px 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; color: var(--s-revisit); background: color-mix(in srgb, var(--s-revisit) 10%, var(--card)); }
-.sr-btns { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px 16px 16px; }
 .tbtn.danger { background: color-mix(in srgb, var(--s-revisit) 10%, var(--card)); color: var(--s-revisit); font-weight: 600; }
 .tbtn:disabled { opacity: .55; }
 .vc { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -1254,6 +1257,35 @@ html[data-theme=dark] select option { background: #1C1C1E; color: #fff; }
   html[data-theme=dark] #panel-handle { border-color: #ff6a57; color: #ff6a57; }
 }
 html[data-theme=dark] #logo { background: #fff; border-radius: 10px; padding: 3px 8px; box-sizing: content-box; }
+
+/* akce v kartě účtu jako řádky seznamu (iOS) – nízké, ale dost velké na prst */
+.sr.act { min-height: 44px; gap: 10px; color: var(--accent); font-weight: 600; font-size: 15px; cursor: pointer; }
+.sr.act .ico { width: 19px; height: 19px; flex: none; }
+.sr.act::before { left: 16px !important; }
+.sr.act.bad { color: var(--muted); font-weight: 500; } /* odhlášení je vedlejší akce – červená patří jen hlavní akci */
+.sr.act.bad .ico { color: var(--muted); }
+.sr.act:hover { background: rgba(118,118,128,.06); }
+.sr.act:active { transform: none; background: rgba(118,118,128,.12); }
+.sr.act:disabled { color: var(--muted); cursor: progress; }
+.sr.act:disabled .ico { animation: lg-spin 1s linear infinite; }
+.sr.act:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; }
+.sr-err { margin: 2px 16px 8px; }
+@media (min-width: 821px) and (max-width: 1320px) { .chip .l, .chip .s { display: none; } .chip .m { display: inline; } }
+
+/* tmavý vzhled – měkčí přechody: plochy ve stupních šedé jako v iOS, jemné oddělovače místo tvrdých čar */
+html[data-theme=dark] { --bg-side: #000; --line: rgba(84,84,88,.55); }
+html[data-theme=dark] #top { border-bottom-color: rgba(255,255,255,.07); }
+html[data-theme=dark] #panel { border-right-color: rgba(255,255,255,.06); }
+html[data-theme=dark] .acc-pad .sg, html[data-theme=dark] .acc-pad .card { background: #2C2C2E; }
+html[data-theme=dark] .acc-pad .seg button.on, html[data-theme=dark] .acc-pad .mini-step button { background: #636366; }
+html[data-theme=dark] .acc-pad .tbtn:not(.pri):not(.danger), html[data-theme=dark] .acc-pad .fact { background: #3A3A3C; }
+html[data-theme=dark] #logo { padding: 2px 7px; border-radius: 9px; }
+@media (max-width: 820px) { html[data-theme=dark] #tabs { border-bottom-color: rgba(255,255,255,.07); } }
+/* telefon: krátké hlášky dole nad legendou, ať nezakrývají obec ani ovládání sledování (s otevřeným panelem nahoře) */
+@media (max-width: 820px) {
+  #toast { top: auto; bottom: calc(var(--tabbar) + var(--safe-b) + 84px); }
+  #app:has(#panel.open) ~ #toast { top: calc(var(--top-h) + 10px); bottom: auto; }
+}
 </style>
 </head>
 <body>
@@ -1302,7 +1334,7 @@ html[data-theme=dark] #logo { background: #fff; border-radius: 10px; padding: 3p
       <button data-tool="area" title="Obkreslit oblast"><i data-ico="pentagon"></i><span>Oblast</span></button>
       <button data-tool="manual" title="Přidat budovu ručně"><i data-ico="plus"></i><span>Přidat</span></button>
     </div>
-    <button id="follow-resume" type="button" hidden><i data-ico="locate"></i><span>Pokračovat ve sledování</span></button>
+    <button id="follow-resume" type="button" hidden aria-label="Pokračovat ve sledování" title="Pokračovat ve sledování"><i data-ico="nav"></i><span>Sledovat</span></button>
     <div id="legend"></div>
     <div id="notice" hidden></div>
     <div id="modebar" hidden></div>
@@ -3066,6 +3098,11 @@ function meMarker(ll) {
   meMark = L.marker(ll, { interactive: false, keyboard: false, zIndexOffset: 1e3, icon: L.divIcon({ className: "me-wrap", html: '<span class="me"><i class="halo"></i><i class="cone"></i><i class="dot"></i></span>', iconSize: [64, 64] }) }).addTo(map);
   meEl = meMark.getElement();
 }
+var layerPt = (ll) => map.project(ll).subtract(map.getPixelOrigin());
+function placeMe(ll) {
+  meMark._latlng = L.latLng(ll[0], ll[1]);
+  if (meEl && !map._animatingZoom) L.DomUtil.setPosition(meEl, layerPt(meMark._latlng));
+}
 function geoClear() {
   cancelAnimationFrame(GEO.raf);
   GEO.raf = 0;
@@ -3116,14 +3153,22 @@ function onFix(p) {
     else if (c.speed != null && c.speed < 0.3) GEO.heading = null;
   } else GEO.heading = null;
   const jitter = Math.max(3, Math.min(fix.acc * 0.35, 12));
-  const moving = c.speed != null && c.speed > 0.8;
+  let moving = c.speed != null && c.speed > 0.8;
+  if (c.speed == null && prev) {
+    const dm = metersBetween(prev, fix), dir = Math.atan2(fix.lon - prev.lon, fix.lat - prev.lat);
+    const same2 = GEO.lastDir != null && Math.abs((dir - GEO.lastDir + 3 * Math.PI) % (2 * Math.PI) - Math.PI) < Math.PI / 3;
+    moving = dm / Math.max(0.2, (fix.t - prev.t) / 1e3) > 0.8 && dm > fix.acc * 0.1 && same2;
+    GEO.lastDir = dm > 0.5 ? dir : GEO.lastDir;
+  }
   if (!GEO.target) GEO.target = { lat: fix.lat, lon: fix.lon };
   else if (moving || metersBetween(GEO.target, fix) > jitter) {
     const now = performance.now();
     const from = GEO.shown ? { ...GEO.shown } : { ...GEO.target };
     const dtFix = prev ? Math.max(200, fix.t - prev.t) : 1e3;
     GEO.target = { lat: fix.lat, lon: fix.lon };
-    GEO.seg = reduceMotion() ? null : { from, to: GEO.target, t0: now, dur: Math.min(1e3, dtFix * 0.9) };
+    const cont = moving || !!GEO.seg || GEO.segAt && now - GEO.segAt < 2500;
+    GEO.segAt = now;
+    GEO.seg = reduceMotion() ? null : { from, to: GEO.target, t0: now, dur: cont ? Math.min(1500, Math.max(300, dtFix * 1.05)) : 600, lin: !!cont };
     if (!GEO.seg) GEO.shown = { ...GEO.target };
   }
   if (fix.acc > 120 && !GEO.weakShown) {
@@ -3176,14 +3221,14 @@ function frame(now) {
   if (GEO.watch == null || !GEO.target) return;
   let busy = false;
   if (GEO.seg) {
-    const k = Math.min(1, (now - GEO.seg.t0) / GEO.seg.dur), e = 1 - (1 - k) * (1 - k);
+    const k = Math.min(1, (now - GEO.seg.t0) / GEO.seg.dur), e = GEO.seg.lin ? k : 1 - (1 - k) * (1 - k);
     GEO.shown = { lat: GEO.seg.from.lat + (GEO.seg.to.lat - GEO.seg.from.lat) * e, lon: GEO.seg.from.lon + (GEO.seg.to.lon - GEO.seg.from.lon) * e };
     if (k >= 1) GEO.seg = null;
     else busy = true;
   } else if (!GEO.shown) GEO.shown = { ...GEO.target };
   const ll = [GEO.shown.lat, GEO.shown.lon];
   if (!meMark) meMarker(ll);
-  else meMark.setLatLng(ll);
+  else placeMe(ll);
   drawAccuracy(!busy);
   if (meEl) {
     const css = prefs.heading && GEO.heading != null ? `rotate(${Math.round(GEO.heading)}deg)` : "";
@@ -3198,6 +3243,7 @@ function frame(now) {
   if (busy) GEO.raf = requestAnimationFrame(frame);
   else if (GEO.panned) {
     GEO.panned = false;
+    GEO.panAcc = 0;
     GEO.lastMoveEnd = now;
     map.fire("moveend");
   }
@@ -3207,10 +3253,10 @@ function followStep(now) {
   const size = map.getSize();
   const padB = isDesk() ? 0 : Math.min(size.y * 0.25, 140);
   const want = L.point(size.x / 2, (size.y - padB) / 2);
-  const cp = map.latLngToContainerPoint([GEO.shown.lat, GEO.shown.lon]);
+  const cp = layerPt(L.latLng(GEO.shown.lat, GEO.shown.lon)).add(map._getMapPanePos());
   let d = cp.subtract(want);
   const dist = Math.hypot(d.x, d.y);
-  if (dist < 0.5) return false;
+  if (dist < 0.02 || dist < 0.5 && !GEO.seg) return false;
   if (dist > size.x) {
     map.setView([GEO.shown.lat, GEO.shown.lon], map.getZoom(), { animate: false });
     return false;
@@ -3223,9 +3269,11 @@ function followStep(now) {
     map.fire("move");
   } else map.panBy(d, { animate: false, noMoveStart: true });
   GEO.panned = true;
-  if (now - GEO.lastMoveEnd > 600) {
+  GEO.panAcc = (GEO.panAcc || 0) + Math.hypot(d.x, d.y);
+  if (GEO.panAcc > Math.min(size.x, size.y) * 0.2 || now - GEO.lastMoveEnd > 5e3 && GEO.panAcc > 2) {
     GEO.lastMoveEnd = now;
     GEO.panned = false;
+    GEO.panAcc = 0;
     map.fire("moveend");
   }
   return true;
@@ -3628,7 +3676,7 @@ var tgl = (k, label) => `<button type="button" class="toggle ${prefs[k] ? "on" :
 var srow = (ico, c, title, sub, right = "") => `<div class="sr">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${right}</div>`;
 var trow = (ico, c, k, title, sub) => srow(ico, c, title, sub, tgl(k, title));
 var seg = (k, opts, label) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map(([v, t]) => `<button type="button" role="radio" aria-checked="${prefs[k] === v}" class="${prefs[k] === v ? "on" : ""}" data-act="pref-set" data-k="${k}" data-v="${v}">${t}</button>`).join("")}</div>`;
-var segrow = (ico, c, k, title, opts, sub) => `<div class="sr col"><div class="sr-top">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span></div>${seg(k, opts, title)}</div>`;
+var segrow = (ico, c, k, title, opts, sub) => opts.length === 2 ? `<div class="sr">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${seg(k, opts, title).replace('class="seg"', 'class="seg in"')}</div>` : `<div class="sr col"><div class="sr-top">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span></div>${seg(k, opts, title)}</div>`;
 var linkrow = (ico, c, act, title, val = "", attrs = "") => `<button type="button" class="sr link" data-act="${act}" ${attrs}>${tileI(ico, c)}<span class="sr-t"><b>${title}</b></span>${val ? `<span class="sr-v">${val}</span>` : ""}${svg("chev", "ico sr-chev")}</button>`;
 var kv = (k, v) => `<div class="sr kv"><span>${k}</span><b>${v}</b></div>`;
 var sgroup = (id, title, body, foot) => `<h5 class="sg-h" id="sg-${id}">${title}</h5><div class="sg" data-g="${id}">${body}</div>${foot ? `<p class="sg-f">${foot}</p>` : ""}`;
@@ -3659,35 +3707,37 @@ function accountGroup() {
       "Dokud se nep\u0159ihl\xE1s\xED\u0161, ukl\xE1d\xE1 se v\u0161e jen do tohoto za\u0159\xEDzen\xED."
     );
   }
-  const open = !!state.acctOpen, pend = store.pending();
-  let body = `<button type="button" class="acct-row" data-act="acct-toggle" aria-expanded="${open}"><span class="av">${esc(initials())}</span>
-    <span class="sr-t"><b>${esc(session.user.email || "\xDA\u010Det")}</b><small class="sync-line" data-tone="${SYNC_TONE[st] || ""}"><i></i>${esc(SYNC_LABEL[st])}</small></span>${svg("chev", "ico sr-chev acct-chev")}</button>`;
+  const open = !!state.acctOpen, pend = store.pending(), email = session.user.email || "\xDA\u010Det";
+  const at = email.indexOf("@"), nameP = at > 0 ? email.slice(0, at) : email;
+  const when = store.lastSync && st === "synced" ? " \xB7 " + fmtTime(store.lastSync.toISOString()).split(" ").pop() : pend && st !== "synced" ? ` \xB7 ${num(pend)} \u010Dek\xE1` : "";
+  let body = `<button type="button" class="acct-row" data-act="acct-toggle" aria-expanded="${open}" aria-label="\xDA\u010Det ${esc(email)}, ${esc(SYNC_LABEL[st])}"><span class="av">${esc(initials())}</span>
+    <span class="sr-t"><b>${esc(nameP)}</b><small class="sync-line" data-tone="${SYNC_TONE[st] || ""}"><i></i>${esc(SYNC_LABEL[st])}${esc(when)}</small></span>${svg("chev", "ico sr-chev acct-chev")}</button>`;
   if (open) {
-    body += `<div class="acct-more">${kv("E-mail", esc(session.user.email || "\u2014"))}${kv("P\u0159ipojen\xED", navigator.onLine ? "Online" : "Offline")}${kv("Stav", esc(SYNC_LABEL[st]))}
+    body += `<div class="acct-more">${kv("E-mail", esc(email))}${kv("P\u0159ipojen\xED", navigator.onLine ? "Online" : '<span class="t-warn">Offline</span>')}
       ${kv("Posledn\xED synchronizace", store.lastSync ? fmtTime(store.lastSync.toISOString()) : "Zat\xEDm neprob\u011Bhla")}${kv("Neodeslan\xE9 zm\u011Bny", pend ? `<span class="t-warn">${num(pend)}</span>` : "\u017D\xE1dn\xE9")}
       ${store.lastError && (st === "error" || st === "offline") ? `<p class="sr-err" role="alert">${esc(errText(store.lastError))}</p>` : ""}
-      <div class="sr-btns">${st === "conflict" ? `<button type="button" class="tbtn pri" data-act="conflicts">Vy\u0159e\u0161it konflikty (${store.conflicts.length})</button>` : `<button type="button" class="tbtn pri" data-act="sb-sync" ${st === "syncing" ? "disabled" : ""}>${svg("refresh")}Synchronizovat te\u010F</button>`}
-      <button type="button" class="tbtn danger" data-act="sb-logout">${svg("logout")}Odhl\xE1sit se</button></div></div>`;
+      ${st === "conflict" ? `<button type="button" class="sr act" data-act="conflicts">${svg("revisit")}<span>Vy\u0159e\u0161it konflikty (${store.conflicts.length})</span></button>` : `<button type="button" class="sr act" data-act="sb-sync" ${st === "syncing" ? "disabled" : ""}>${svg("refresh")}<span>${st === "syncing" ? "Synchronizuji\u2026" : "Synchronizovat te\u010F"}</span></button>`}
+      <button type="button" class="sr act bad" data-act="sb-logout">${svg("logout")}<span>Odhl\xE1sit se</span></button></div>`;
   }
-  return sgroup("acct", "\xDA\u010Det a synchronizace", body, "Za synchronizovanou se zm\u011Bna pova\u017Euje a\u017E po potvrzen\xED serverem.");
+  return sgroup("acct", "\xDA\u010Det a synchronizace", body, open ? "Zm\u011Bna se pova\u017Euje za ulo\u017Eenou a\u017E po potvrzen\xED serverem." : "");
 }
 var gpsGroup = () => sgroup(
   "gps",
   "Sledov\xE1n\xED polohy",
-  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost polohy", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "M\xE9n\u011B \u010Dast\xE9 m\u011B\u0159en\xED, \u0161et\u0159\xED baterii. Hod\xED se do auta." : "GPS m\u011B\u0159\xED co nej\u010Dast\u011Bji. Nejlep\u0161\xED p\u0159i ch\u016Fzi od domu k domu.") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy mapa sleduje te\u010Dku.") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Modr\xFD kruh kolem te\u010Dky ukazuje nejistotu m\u011B\u0159en\xED.") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky ukazuje, kam jde\u0161."),
-  "Poloha se m\u011B\u0159\xED jen p\u0159i otev\u0159en\xE9 aplikaci. Prohl\xED\u017Ee\u010D na iPhonu neumo\u017E\u0148uje sledovat polohu na pozad\xED ani p\u0159i zam\u010Den\xE9 obrazovce; b\u011Bhem sledov\xE1n\xED proto z\u016Fst\xE1v\xE1 displej rozsv\xEDcen\xFD (pokud to prohl\xED\u017Ee\u010D um\xED)."
+  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky"),
+  "Poloha se m\u011B\u0159\xED jen p\u0159i otev\u0159en\xE9 aplikaci \u2013 na pozad\xED ji iPhone webu nedovol\xED. P\u0159i sledov\xE1n\xED displej nezhasne."
 );
 var mapGroup = () => sgroup(
   "map",
   "Mapa a adresy",
-  trow("pointer", "#F93A25", "quick", "Klepnut\xEDm ozna\u010Dit jako rozneseno", "Klepnut\xED na zelenou budovu otev\u0159e detail.") + srow("file", "#FF9500", "Let\xE1k\u016F za budovu", "", `<div class="mini-step"><button type="button" data-act="q-" aria-label="M\xE9n\u011B">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+" aria-label="V\xEDce">+</button></div>`) + trow("home", "#30B651", "icons", "Ikony stavu na budov\xE1ch", "P\u0159i velk\xE9m p\u0159ibl\xED\u017Een\xED.") + trow("road", "#5856D6", "areas", "Ulice a oblasti", "Zobrazit ozna\u010Den\xE9 ulice a obkreslen\xE9 oblasti.") + segrow("layers", "#30B0C7", "basemap", "Podklad mapy", [["osm", "Standardn\xED"], ["light", "Sv\u011Btl\xFD"], ["auto", "Auto"]], "Auto = v tmav\xE9m vzhledu tmav\xE1 mapa.") + srow("dashboard", "#8E8E93", "Barvy stav\u016F", "", `<span class="sdots">${ORDER.map((k) => `<i data-status="${k}" title="${STATUS[k].label}"></i>`).join("")}</span>`) + linkrow("refresh", "#007AFF", "cache-clear", "St\xE1hnout mapov\xE1 data znovu", `${num(B.size)} budov`),
-  "Obrysy budov se dr\u017E\xED v za\u0159\xEDzen\xED " + CFG.cacheDays + " dn\xED, aby se zbyte\u010Dn\u011B nezat\u011B\u017Eovalo Overpass API."
+  trow("pointer", "#F93A25", "quick", "Klepnut\xEDm = rozneseno", "Zelen\xE1 budova otev\u0159e detail") + srow("file", "#FF9500", "Let\xE1k\u016F za budovu", "", `<div class="mini-step"><button type="button" data-act="q-" aria-label="M\xE9n\u011B">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+" aria-label="V\xEDce">+</button></div>`) + trow("home", "#30B651", "icons", "Ikony stavu", "Na budov\xE1ch p\u0159i p\u0159ibl\xED\u017Een\xED") + trow("road", "#5856D6", "areas", "Ulice a oblasti", "Zobrazit na map\u011B") + segrow("layers", "#30B0C7", "basemap", "Podklad mapy", [["osm", "Standardn\xED"], ["light", "Sv\u011Btl\xFD"], ["auto", "Auto"]], "Auto = tmav\xE1 mapa v tmav\xE9m vzhledu") + srow("dashboard", "#8E8E93", "Barvy stav\u016F", "", `<span class="sdots">${ORDER.map((k) => `<i data-status="${k}" title="${STATUS[k].label}"></i>`).join("")}</span>`) + linkrow("refresh", "#007AFF", "cache-clear", "St\xE1hnout mapov\xE1 data znovu", `${num(B.size)} budov`),
+  "Obrysy budov se dr\u017E\xED v za\u0159\xEDzen\xED " + CFG.cacheDays + " dn\xED."
 );
 var lookGroup = () => sgroup(
   "look",
   "Vzhled a chov\xE1n\xED",
-  segrow("moon", "#5856D6", "theme", "Vzhled", [["system", "Syst\xE9m"], ["light", "Sv\u011Btl\xFD"], ["dark", "Tmav\xFD"]]) + trow("sparkles", "#FF2D55", "anim", "Animace", "Plynul\xFD pohyb te\u010Dky a mapy, p\u0159echody panel\u016F.") + segrow("rows", "#8E8E93", "density", "Hustota", [["normal", "B\u011B\u017En\xE1"], ["compact", "Kompaktn\xED"]]) + trow("phone", "#34C759", "haptics", "Vibrace p\u0159i ozna\u010Den\xED", "vibrate" in navigator ? "Kr\xE1tk\xE9 cvaknut\xED po klepnut\xED na budovu." : "Tento prohl\xED\u017Ee\u010D vibrace z webu nepodporuje (iPhone).") + trow("map", "#FF9500", "lastView", "Pamatovat posledn\xED m\xEDsto", "Po otev\u0159en\xED se mapa vr\xE1t\xED, kde jsi skon\u010Dil."),
-  "P\u0159i zapnut\xE9m \u201EOmezit pohyb\u201C v syst\xE9mu se animace vyp\xEDnaj\xED automaticky."
+  segrow("moon", "#5856D6", "theme", "Vzhled", [["system", "Syst\xE9m"], ["light", "Sv\u011Btl\xFD"], ["dark", "Tmav\xFD"]]) + trow("sparkles", "#FF2D55", "anim", "Animace", "Pohyb te\u010Dky, mapy a panel\u016F") + segrow("rows", "#8E8E93", "density", "Hustota", [["normal", "B\u011B\u017En\xE1"], ["compact", "Kompaktn\xED"]]) + trow("phone", "#34C759", "haptics", "Vibrace", "vibrate" in navigator ? "Po ozna\u010Den\xED budovy" : "iPhone z webu nevibruje") + trow("map", "#FF9500", "lastView", "Pamatovat m\xEDsto na map\u011B", "Po otev\u0159en\xED pokra\u010Duje\u0161, kde jsi skon\u010Dil"),
+  "Se zapnut\xFDm \u201EOmezit pohyb\u201C v syst\xE9mu se animace vypnou samy."
 );
 function dataGroup() {
   const recs = store.all("building_records").length, visits = store.all("visits").length, pend = store.pending();
@@ -3695,13 +3745,13 @@ function dataGroup() {
     "data",
     "Data a z\xE1lohy",
     kv("V za\u0159\xEDzen\xED", `${num(recs)} budov \xB7 ${num(visits)} n\xE1v\u0161t\u011Bv`) + kv("\xDAlo\u017Ei\u0161t\u011B", volatile ? '<span class="t-bad">Neukl\xE1d\xE1 se trvale</span>' : "Trval\xE9") + kv("Neodeslan\xE9 zm\u011Bny", !session ? "Jen v za\u0159\xEDzen\xED" : pend ? `<span class="t-warn">${num(pend)} \u010Dek\xE1</span>` : "\u017D\xE1dn\xE9") + linkrow("database", "#5856D6", "x-backup", "St\xE1hnout \xFAplnou z\xE1lohu") + linkrow("history", "#FF9500", "i-backup", "Obnovit ze z\xE1lohy") + linkrow("updown", "#30B0C7", "go-tab", "Dal\u0161\xED exporty a import", "GeoJSON, CSV", 'data-tab="io"') + '<input id="file" type="file" hidden>',
-    "Obnova ze z\xE1lohy nic nema\u017Ee \u2013 z\xE1znamy se stejn\xFDm identifik\xE1torem aktualizuje, ostatn\xED p\u0159id\xE1."
+    "Obnova ze z\xE1lohy nic nema\u017Ee \u2013 stejn\xE9 z\xE1znamy aktualizuje, ostatn\xED p\u0159id\xE1."
   );
 }
 var aboutGroup = () => sgroup(
   "about",
   "O aplikaci",
-  kv("Verze", APP_VERSION) + linkrow("help", "#007AFF", "help", "N\xE1pov\u011Bda") + `<div class="sr-pad"><p class="sg-note">Mapa, obrysy budov, adresy a ulice: \xA9 p\u0159isp\u011Bvatel\xE9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (licence ODbL), stahov\xE1no p\u0159es Overpass API; hled\xE1n\xED adres zaji\u0161\u0165uje Nominatim, mapu vykresluje Leaflet${prefs.basemap !== "osm" ? ", sv\u011Btl\xFD a tmav\xFD podklad \xA9 CARTO" : ""}. OpenStreetMap neobsahuje jednotliv\xE9 byty a u n\u011Bkter\xFDch dom\u016F chyb\xED adresa nebo obrys \u2013 takov\xE9 \xFAdaje se dopl\u0148uj\xED ru\u010Dn\u011B.</p></div>`
+  kv("Verze", APP_VERSION) + linkrow("help", "#007AFF", "help", "N\xE1pov\u011Bda") + `<div class="sr-pad"><p class="sg-note">Mapov\xE1 data \xA9 p\u0159isp\u011Bvatel\xE9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (ODbL) \xB7 Overpass API \xB7 Nominatim \xB7 Leaflet${prefs.basemap !== "osm" ? " \xB7 podklad \xA9 CARTO" : ""}</p></div>`
 );
 var settingsHtml = () => `<div class="set">${accountGroup()}${gpsGroup()}${mapGroup()}${lookGroup()}${dataGroup()}${aboutGroup()}</div>`;
 function showHelp() {
@@ -3710,7 +3760,8 @@ function showHelp() {
     <li><b>Poloha</b> \u2013 tla\u010D\xEDtko \u201EMoje poloha\u201C zapne sledov\xE1n\xED. Kdy\u017E mapou pohne\u0161 prstem, sledov\xE1n\xED se pozastav\xED; vr\xE1t\xED\u0161 ho tla\u010D\xEDtkem \u201EPokra\u010Dovat ve sledov\xE1n\xED\u201C.</li>
     <li><b>V\xFDb\u011Br</b> ozna\u010D\xED v\xEDc budov najednou, <b>Ulice</b> a <b>Oblast</b> slou\u017E\xED pro m\xEDsta bez obrys\u016F.</li>
     <li><b>Synchronizace</b> \u2013 po p\u0159ihl\xE1\u0161en\xED se v\u0161e propisuje mezi za\u0159\xEDzen\xEDmi. Bez sign\xE1lu se zm\u011Bny ukl\xE1daj\xED do telefonu a ode\u0161lou se pozd\u011Bji.</li>
-    <li><b>Z\xE1lohy</b> \u2013 v Nastaven\xED \u2192 Data a z\xE1lohy si m\u016F\u017Ee\u0161 kdykoli st\xE1hnout celou evidenci.</li></ol>
+    <li><b>Z\xE1lohy</b> \u2013 v Nastaven\xED \u2192 Data a z\xE1lohy si m\u016F\u017Ee\u0161 kdykoli st\xE1hnout celou evidenci.</li>
+    <li><b>Chyb\u011Bj\xEDc\xED d\u016Fm nebo adresa</b> \u2013 OpenStreetMap nezn\xE1 jednotliv\xE9 byty a u n\u011Bkter\xFDch dom\u016F chyb\xED obrys \u010Di adresa. Dopl\u0148 je tla\u010D\xEDtkem <b>P\u0159idat</b>.</li></ol>
     <div class="btns"><button class="btn pri" data-m="x">Rozum\xEDm</button></div>`, { x: closeModal });
 }
 function applyPref(k) {
@@ -3734,11 +3785,11 @@ function applyPref(k) {
   } else if (k === "quick") toast(prefs.quick ? "Klepnut\xED na budovu ji rovnou ozna\u010D\xED." : "Klepnut\xED na budovu otev\u0159e detail.");
   if (["gpsMode", "basemap"].includes(k) && !state.sel) softRender();
 }
-var quickCard = () => card("Klepnut\xED na budovu", "pointer", `<div class="qrow">
-    <div><b>Rovnou ozna\u010Dit jako rozneseno</b><small>Klepnut\xED obarv\xED budovu zelen\u011B. Klepnut\xEDm na zelenou budovu otev\u0159e\u0161 detail.</small></div>
-    <button type="button" class="toggle ${prefs.quick ? "on" : ""}" data-act="q-toggle" role="switch" aria-checked="${prefs.quick}" aria-label="Rovnou ozna\u010Dit jako rozneseno"><i></i></button></div>
-  <div class="qrow"><div><b>Let\xE1k\u016F za budovu</b><small>P\u0159ip\xED\u0161e se p\u0159i ka\u017Ed\xE9m klepnut\xED.</small></div>
-    <div class="mini-step"><button type="button" data-act="q-">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+">+</button></div></div>`);
+var quickCard = () => `<div class="set">${sgroup(
+  "quick",
+  "Klepnut\xED na budovu",
+  srow("pointer", "#F93A25", "Klepnut\xEDm = rozneseno", "Zelen\xE1 budova otev\u0159e detail", `<button type="button" class="toggle ${prefs.quick ? "on" : ""}" data-act="q-toggle" role="switch" aria-checked="${prefs.quick}" aria-label="Rovnou ozna\u010Dit jako rozneseno"><i></i></button>`) + srow("file", "#FF9500", "Let\xE1k\u016F za budovu", "P\u0159ip\xED\u0161e se p\u0159i ka\u017Ed\xE9m klepnut\xED", `<div class="mini-step"><button type="button" data-act="q-" aria-label="M\xE9n\u011B">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+" aria-label="V\xEDce">+</button></div>`)
+)}</div>`;
 var exportCard = () => card("Export dat", "download", `<div class="grid2">
   <button class="tbtn" data-act="x-geojson">${svg("globe")}GeoJSON</button><button class="tbtn" data-act="x-csv">${svg("file")}CSV \u2013 budovy</button>
   <button class="tbtn" data-act="x-csv-visits">${svg("table")}CSV \u2013 n\xE1v\u0161t\u011Bvy</button><button class="tbtn" data-act="x-backup">${svg("database")}\xDApln\xE1 z\xE1loha</button></div>`);
@@ -3779,7 +3830,8 @@ var accHtml = (s) => {
     <div class="acc-b"><div class="acc-in"><div class="acc-pad">${open ? VIEWS[s.t]() : ""}</div></div></div></div>`;
 };
 function sidebarHtml() {
-  const who = session && session.user ? esc(session.user.email) : "Nep\u0159ihl\xE1\u0161en";
+  const em = session && session.user && session.user.email ? session.user.email : "";
+  const who = em ? esc(em.split("@")[0]) : "Nep\u0159ihl\xE1\u0161en";
   return `<button class="acct" type="button" data-act="acc-open" data-tab="settings"><span class="av">${esc(initials())}</span>
       <span class="acct-t"><b>${who}</b><small>\xDA\u010Det a synchronizace \xB7 ${esc(rowValue("settings"))}</small></span>${svg("chev", "ico acc-chev")}</button>` + SECTIONS.map((g) => `<div class="sgroup">${g.map(accHtml).join("")}</div>`).join("");
 }
@@ -4457,7 +4509,7 @@ $("#sync").addEventListener("click", () => {
     return;
   }
   if (session) store.sync();
-  state.acctOpen = true;
+  if (["error", "conflict"].includes(store.state)) state.acctOpen = true;
   if (isDesk()) setSide(true);
   openSection("settings");
 });
