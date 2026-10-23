@@ -1286,6 +1286,49 @@ html[data-theme=dark] #logo { padding: 2px 7px; border-radius: 9px; }
   #toast { top: auto; bottom: calc(var(--tabbar) + var(--safe-b) + 84px); }
   #app:has(#panel.open) ~ #toast { top: calc(var(--top-h) + 10px); bottom: auto; }
 }
+
+/* ============ tým: kolegové na mapě ============ */
+.mate-wrap { background: none; border: 0; }
+.mate { position: absolute; left: 0; top: 0; display: block; }
+.mate-dot { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--c); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.mate-n { position: absolute; left: 0; bottom: 13px; transform: translateX(-50%); padding: 3px 9px; border-radius: 999px; background: var(--c); color: #fff; font-size: 12.5px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.mate-n::after { content: ''; position: absolute; left: 50%; bottom: -4px; margin-left: -4px; border: 4px solid transparent; border-bottom: 0; border-top-color: var(--c); }
+.mate-wrap.stale .mate-dot { background: #8E8E93; }
+.mate-wrap.stale .mate-n { background: rgba(60,60,67,.82); }
+.mate-wrap.stale .mate-n::after { border-top-color: rgba(60,60,67,.82); }
+.mate-flash { animation: mate-flash 2.4s ease-out forwards; }
+@keyframes mate-flash { 0% { stroke-opacity: 1; fill-opacity: .3; } 70% { stroke-opacity: .8; } 100% { stroke-opacity: 0; fill-opacity: 0; } }
+#team-chip { position: absolute; top: 20px; left: 84px; z-index: 1001; display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px 0 11px; border: 1px solid rgba(255,255,255,.7); border-radius: 999px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); box-shadow: 0 4px 16px rgba(0,0,0,.1); font-weight: 600; font-size: 14px; color: var(--ink); white-space: nowrap; }
+#team-chip::after { content: ''; position: absolute; inset: -4px; }
+#team-chip .ico { width: 18px; height: 18px; }
+#team-chip.on .ico { color: #5856D6; }
+#team-chip.on::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--s-done); order: 3; animation: pulse 1.6s infinite; }
+@media (max-width: 820px) {
+  #team-chip { position: fixed; top: calc(var(--top-h) + 60px); left: 10px; z-index: 1150; }
+  #notice { top: calc(var(--top-h) + 110px) !important; }
+  #panel.open ~ #map-wrap #team-chip { opacity: 0; pointer-events: none; }
+}
+html[data-theme=dark] #team-chip { border-color: rgba(255,255,255,.12); }
+.mate-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--c); color: #fff; font-weight: 700; font-size: 12px; }
+.sr.mem { min-height: 50px; }
+.live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--s-done); margin-right: 5px; vertical-align: 1px; animation: pulse 1.6s infinite; }
+.badge-s { font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-tint); padding: 1px 7px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; }
+.mini-link { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 13.5px; padding: 4px 0 4px 8px; }
+pre.invite { white-space: pre-wrap; font: inherit; font-size: 13.5px; line-height: 1.5; background: var(--soft); border-radius: 14px; padding: 12px 14px; margin: 12px 0 0; user-select: text; -webkit-user-select: text; }
+.dlg .btn .ico { width: 18px; height: 18px; vertical-align: -4px; margin-right: 6px; }
+.dlg .seg { margin-top: 6px; }
+.dlg .sg.mates { background: var(--card); margin-top: 12px; }
+.lg-link.soft { display: block; margin: 2px auto 0; color: var(--muted); font-weight: 500; }
+.lg-link.soft b { color: var(--accent); font-weight: 600; }
+#sync[data-s=outsider] { background: color-mix(in srgb, var(--s-partial) 14%, var(--card)); border-color: transparent; }
+#sync[data-s=outsider] i { background: var(--s-partial); }
+.lg-note { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.field .pw-row { display: flex; gap: 8px; margin-top: 0; }
+.pw-row input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.pw-row .tbtn { flex: none; min-height: 42px; padding: 0 14px; }
+details.mf-pw { margin-top: 12px; padding: 10px 14px; border-radius: 14px; background: var(--soft); }
+details.mf-pw summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--accent); }
+details.mf-pw .btn { margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -1334,6 +1377,7 @@ html[data-theme=dark] #logo { padding: 2px 7px; border-radius: 9px; }
       <button data-tool="area" title="Obkreslit oblast"><i data-ico="pentagon"></i><span>Oblast</span></button>
       <button data-tool="manual" title="Přidat budovu ručně"><i data-ico="plus"></i><span>Přidat</span></button>
     </div>
+    <button id="team-chip" type="button" hidden aria-label="Kdo z týmu roznáší"><i data-ico="users"></i><span></span></button>
     <button id="follow-resume" type="button" hidden aria-label="Pokračovat ve sledování" title="Pokračovat ve sledování"><i data-ico="nav"></i><span>Sledovat</span></button>
     <div id="legend"></div>
     <div id="notice" hidden></div>
@@ -1642,7 +1686,7 @@ var Store = class {
     this.unsub = null;
     if (remote) {
       this.unsub = remote.subscribe((table, row) => {
-        this.applyRemote(table, row);
+        this.applyRemote(table, row, true);
         this.updateState();
       });
     }
@@ -1702,7 +1746,7 @@ var Store = class {
     }
   }
   // Přijme řádek ze serveru (stažení i okamžitá změna z jiného zařízení).
-  applyRemote(table, remote) {
+  applyRemote(table, remote, live = false) {
     if (!remote || !remote.id || !this.t[table]) return;
     const local = this.t[table].get(remote.id);
     if (local && local.rev === remote.rev && !local._dirty) return;
@@ -1720,7 +1764,7 @@ var Store = class {
     const next = { ...remote, _dirty: false, _ver: local && local._ver || 0 };
     this.t[table].set(next.id, next);
     this.persist.putRow(table, next).catch((e) => this.fail(e));
-    this.emit({ type: "change", table, id: next.id, remote: true });
+    this.emit({ type: "change", table, id: next.id, remote: true, live, by: remote.updated_by || null });
   }
   addConflict(table, mine, theirs) {
     this.conflicts = this.conflicts.filter((c) => !(c.table === table && c.id === mine.id));
@@ -2231,11 +2275,272 @@ var P = {
   help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
   shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
   wifioff: '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/>',
-  x: '<path d="M18 6 6 18M6 6l12 12"/>'
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  userplus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  key: '<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4M21 2l-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+  copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5zM15 5l4 4"/>'
 };
 var svg = (name, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] || ""}</svg>`;
 var STATUS_ICON = { none: "home", done: "home", partial: "home", revisit: "revisit" };
 var pinSvg = '<svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>';
+
+// js/team.js
+var COLORS = ["#007AFF", "#5856D6", "#AF52DE", "#30B0C7", "#FF2D55", "#A2845E", "#0A84FF", "#64D2FF"];
+var colorFor = (id) => {
+  let h = 0;
+  for (const ch of String(id || "")) h = h * 31 + ch.charCodeAt(0) >>> 0;
+  return COLORS[h % COLORS.length];
+};
+var initialsOf = (name) => {
+  const p = String(name || "?").trim().split(/[\s._@-]+/).filter(Boolean);
+  return ((p[0] || "?")[0] + (p[1] ? p[1][0] : "")).toUpperCase();
+};
+var esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var LIVE_FRESH = 60 * 1e3;
+var LIVE_MAX = 10 * 60 * 1e3;
+var SEND_EVERY = 4e3;
+var SEND_MIN_M = 8;
+var HEARTBEAT = 2e4;
+function agoText(ms) {
+  const s = Math.max(0, Math.round(ms / 1e3));
+  if (s < 10) return "pr\xE1v\u011B te\u010F";
+  if (s < 60) return `p\u0159ed ${s} s`;
+  return `p\u0159ed ${Math.round(s / 60)} min`;
+}
+var Team = class {
+  constructor({ map: map2, L: L2, onChange, haversine: haversine2 }) {
+    this.map = map2;
+    this.L = L2;
+    this.onChange = onChange || (() => {
+    });
+    this.haversine = haversine2;
+    this.sb = null;
+    this.uid = null;
+    this.me = null;
+    this.mode = "off";
+    this.members = [];
+    this.live = /* @__PURE__ */ new Map();
+    this.ch = null;
+    this.timer = 0;
+    this.last = null;
+    this.sentAt = 0;
+    this.sharing = false;
+    this.queued = null;
+  }
+  get isAdmin() {
+    return this.mode === "member" && this.me && this.me.role === "admin";
+  }
+  nameOf(uid2) {
+    if (!uid2) return "";
+    const m = this.members.find((x) => x.user_id === uid2);
+    if (m) return m.name;
+    const l = this.live.get(uid2);
+    return l ? l.row.name : "";
+  }
+  // po přihlášení: zjistit členství (a doplnit své user_id do týmu)
+  async start(sb2, session2) {
+    this.stop();
+    this.sb = sb2;
+    this.uid = session2.user.id;
+    const { data, error } = await sb2.rpc("rzt_claim");
+    if (error) {
+      if (/rzt_claim|function|PGRST202|404/i.test(error.message + " " + (error.code || ""))) {
+        this.mode = "legacy";
+        this.onChange("mode");
+        return this.mode;
+      }
+      throw error;
+    }
+    const me = Array.isArray(data) ? data[0] : data;
+    if (!me || !me.email) {
+      this.mode = "outsider";
+      this.me = null;
+      this.onChange("mode");
+      return this.mode;
+    }
+    this.me = me;
+    this.mode = "member";
+    await this.loadMembers();
+    this.subscribe();
+    await this.loadLive();
+    this.timer = setInterval(() => this.refresh(), 15e3);
+    this.onChange("mode");
+    return this.mode;
+  }
+  stop() {
+    clearInterval(this.timer);
+    this.timer = 0;
+    if (this.ch && this.sb) {
+      try {
+        this.sb.removeChannel(this.ch);
+      } catch (e) {
+      }
+    }
+    this.ch = null;
+    for (const id of [...this.live.keys()]) this.drop(id);
+    this.members = [];
+    this.me = null;
+    this.mode = "off";
+    this.sharing = false;
+    this.last = null;
+  }
+  async loadMembers() {
+    const { data, error } = await this.sb.from("team_members").select("*").order("name");
+    if (error) throw error;
+    this.members = data || [];
+    this.onChange("members");
+  }
+  // správce založí účet rovnou s heslem (funkce v databázi – žádný e-mail, nic se nepotvrzuje)
+  async addMember({ email, name, role, password }) {
+    const { error } = await this.sb.rpc("rzt_add_member", { p_email: String(email).trim().toLowerCase(), p_name: String(name).trim(), p_role: role === "admin" ? "admin" : "member", p_password: password });
+    if (error) throw error;
+    await this.loadMembers();
+  }
+  async setMemberPassword(email, password) {
+    const { error } = await this.sb.rpc("rzt_set_member_password", { p_email: email, p_password: password });
+    if (error) throw error;
+  }
+  async updateMember(email, patch) {
+    const { error } = await this.sb.from("team_members").update(patch).eq("email", email);
+    if (error) throw error;
+    await this.loadMembers();
+  }
+  async removeMember(email) {
+    const { error } = await this.sb.rpc("rzt_remove_member", { p_email: email });
+    if (error) throw error;
+    await this.loadMembers();
+  }
+  async setMyName(name) {
+    const { error } = await this.sb.rpc("rzt_set_my_name", { new_name: String(name).trim() });
+    if (error) throw error;
+    if (this.me) this.me.name = String(name).trim();
+    await this.loadMembers();
+  }
+  // ---------- poloha kolegů naživo ----------
+  subscribe() {
+    this.ch = this.sb.channel("rzt-live").on("postgres_changes", { event: "*", schema: "public", table: "live_locations" }, (p) => {
+      const r = p.new && p.new.user_id ? p.new : null;
+      if (r) this.upsertLive(r);
+      else if (p.old && p.old.user_id) this.drop(p.old.user_id);
+    }).on("postgres_changes", { event: "*", schema: "public", table: "team_members" }, () => {
+      this.loadMembers().catch(() => {
+      });
+    }).subscribe();
+  }
+  async loadLive() {
+    const since = new Date(Date.now() - LIVE_MAX).toISOString();
+    const { data, error } = await this.sb.from("live_locations").select("*").gt("updated_at", since);
+    if (error) throw error;
+    for (const r of data || []) this.upsertLive(r, true);
+  }
+  visible(r, now = Date.now()) {
+    return r.active !== false && r.user_id !== this.uid && now - Date.parse(r.updated_at) < LIVE_MAX && Number.isFinite(r.lat) && Number.isFinite(r.lon);
+  }
+  upsertLive(r, initial) {
+    if (r.user_id === this.uid) return;
+    const cur = this.live.get(r.user_id);
+    if (!this.visible(r)) {
+      if (cur) this.drop(r.user_id);
+      return;
+    }
+    const L2 = this.L;
+    if (!cur) {
+      const c = colorFor(r.user_id);
+      const marker = L2.marker([r.lat, r.lon], { keyboard: false, zIndexOffset: 900, title: r.name || "Kolega", icon: L2.divIcon({ className: "mate-wrap", html: `<span class="mate" style="--c:${c}"><b class="mate-n"></b><i class="mate-dot"></i></span>`, iconSize: [0, 0] }) }).addTo(this.map);
+      const item = { row: r, marker, tween: null };
+      this.live.set(r.user_id, item);
+      this.label(item);
+      marker.on("click", () => this.onChange("mate-click", r.user_id));
+      if (!initial) this.onChange("mate-join", r.user_id);
+    } else {
+      const from = cur.marker.getLatLng();
+      cur.row = r;
+      this.label(cur);
+      this.move(cur, from, L2.latLng(r.lat, r.lon));
+    }
+    this.onChange("live");
+  }
+  // plynulý přesun značky kolegy k nové poloze (jen vykreslení – data jsou přesně ta, co přišla)
+  move(item, from, to) {
+    cancelAnimationFrame(item.tween);
+    const t0 = performance.now(), dur = 900;
+    if (this.haversine(from.lat, from.lng, to.lat, to.lng) > 300 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      item.marker.setLatLng(to);
+      return;
+    }
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      item.marker.setLatLng([from.lat + (to.lat - from.lat) * k, from.lng + (to.lng - from.lng) * k]);
+      if (k < 1) item.tween = requestAnimationFrame(step);
+    };
+    item.tween = requestAnimationFrame(step);
+  }
+  label(item) {
+    const el = item.marker.getElement();
+    if (!el) return;
+    const age = Date.now() - Date.parse(item.row.updated_at);
+    const n = el.querySelector(".mate-n");
+    const txt = (item.row.name || "Kolega") + (age > LIVE_FRESH ? " \xB7 " + agoText(age) : "");
+    if (n.textContent !== txt) n.textContent = txt;
+    el.classList.toggle("stale", age > LIVE_FRESH);
+  }
+  drop(id) {
+    const it = this.live.get(id);
+    if (!it) return;
+    cancelAnimationFrame(it.tween);
+    it.marker.remove();
+    this.live.delete(id);
+    this.onChange("live");
+  }
+  refresh() {
+    const now = Date.now();
+    for (const [id, it] of this.live) {
+      if (!this.visible(it.row, now)) this.drop(id);
+      else this.label(it);
+    }
+  }
+  mates() {
+    return [...this.live.values()].map((x) => x.row).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at));
+  }
+  // ---------- moje poloha pro tým ----------
+  // volá se při každém bodu GPS; posílá jen občas (každé 4 s při pohybu, jinak alespoň jednou za 20 s)
+  share(fix, heading) {
+    if (this.mode !== "member" || !this.sb) return;
+    this.sharing = true;
+    const now = Date.now();
+    const moved = !this.last || this.haversine(this.last.lat, this.last.lon, fix.lat, fix.lon) > SEND_MIN_M;
+    if (this.sentAt && !(moved && now - this.sentAt >= SEND_EVERY) && now - this.sentAt < HEARTBEAT) return;
+    this.sentAt = now;
+    this.last = { lat: fix.lat, lon: fix.lon };
+    this.send({ lat: fix.lat, lon: fix.lon, acc: Math.round(fix.acc), heading: heading == null ? null : Math.round(heading), active: true });
+  }
+  async stopShare() {
+    if (!this.sharing || this.mode !== "member" || !this.sb) {
+      this.sharing = false;
+      return;
+    }
+    this.sharing = false;
+    this.sentAt = 0;
+    this.last = null;
+    await this.send({ active: false });
+  }
+  async send(part) {
+    const row = { user_id: this.uid, name: this.me && this.me.name || "", ...part };
+    if (part.active === false) {
+      const { error: error2 } = await this.sb.from("live_locations").update({ active: false }).eq("user_id", this.uid);
+      if (error2) console.warn("[t\xFDm] poloha", error2);
+      return;
+    }
+    const { error } = await this.sb.from("live_locations").upsert(row, { onConflict: "user_id" });
+    if (error) console.warn("[t\xFDm] poloha", error);
+  }
+};
+function mateHtml(r, now, isMe) {
+  const age = now - Date.parse(r.updated_at);
+  return `<span class="mate-av" style="--c:${colorFor(r.user_id)}">${esc(initialsOf(r.name))}</span><span class="sr-t"><b>${esc(r.name || "Kolega")}${isMe ? " (ty)" : ""}</b><small>${age < LIVE_FRESH ? '<i class="live-dot"></i>Rozn\xE1\u0161\xED \xB7 ' : ""}${agoText(age)}</small></span>`;
+}
 
 // js/app.js
 var CFG = window.RZT_CONFIG;
@@ -2255,7 +2560,7 @@ var $ = (s) => document.querySelector(s);
 document.querySelectorAll("[data-ico]").forEach((el) => {
   el.outerHTML = el.dataset.ico === "pin" ? pinSvg : svg(el.dataset.ico, el.dataset.cls || "ico");
 });
-var esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var esc2 = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var pad = (n) => String(n).padStart(2, "0");
 var dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 var today = () => dayKey(/* @__PURE__ */ new Date());
@@ -2327,6 +2632,7 @@ var BASEMAPS = {
 var baseLayer = null;
 map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 L.control.scale({ imperial: false, position: "bottomright" }).addTo(map);
+var team = new Team({ map, L, haversine, onChange: (what, id) => onTeam(what, id) });
 map.createPane("shapes").style.zIndex = 420;
 map.createPane("lines").style.zIndex = 430;
 map.createPane("sketch").style.zIndex = 440;
@@ -2547,7 +2853,7 @@ function fromStoreRow(g) {
   return { id: g.id, osm_type: g.osm_type, osm_id: g.osm_id, source: g.source, geometry: g.geometry, lat: g.lat, lon: g.lon, tags: g.osm_tags || {} };
 }
 var QPREF = "rzt-quick";
-var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true };
+var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true };
 var prefs = (() => {
   try {
     return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
@@ -2774,7 +3080,7 @@ function notice(text, kind = "", action = null) {
   }
   el.hidden = false;
   el.className = kind === "err" ? "err" : "";
-  el.innerHTML = esc(text) + (action ? ` <button type="button">${esc(action.label)}</button>` : "");
+  el.innerHTML = esc2(text) + (action ? ` <button type="button">${esc2(action.label)}</button>` : "");
   if (action) el.querySelector("button").onclick = action.fn;
 }
 function ingest(key, data) {
@@ -2987,7 +3293,7 @@ function renderModebar() {
     const segs = [...state.streetSel.values()];
     const name = segs.length ? segs[0].name : "";
     const total = name ? [...streets.values()].filter((s) => s.name === name).length : 0;
-    el.innerHTML = segs.length ? `<p><b>${esc(name)}</b> \u2013 vybr\xE1no ${segs.length} z ${total} na\u010Dten\xFDch \xFAsek\u016F. Ulo\u017E se stavem:</p>
+    el.innerHTML = segs.length ? `<p><b>${esc2(name)}</b> \u2013 vybr\xE1no ${segs.length} z ${total} na\u010Dten\xFDch \xFAsek\u016F. Ulo\u017E se stavem:</p>
          <div class="status-grid" style="margin-bottom:8px">${sbtns("", "street-save", "s", ["done", "partial", "revisit"])}</div>
          <div class="row"><button class="btn sm" data-act="street-all">Vybrat celou ulici</button><button class="btn sm" data-act="cancel">Zru\u0161it</button></div>` : `<p><b>Ozna\u010Den\xED ulice:</b> klepni na ulici (\u0161ed\xE9 pruhy). M\u016F\u017Ee\u0161 vybrat jen n\u011Bkter\xE9 \xFAseky, nebo celou ulici.</p>
          <div class="row"><button class="btn sm" data-act="cancel">Zru\u0161it</button></div>`;
@@ -3118,6 +3424,8 @@ function geoClear() {
   }
 }
 function geoStop() {
+  team.stopShare().catch(() => {
+  });
   if (GEO.watch != null) navigator.geolocation.clearWatch(GEO.watch);
   GEO.watch = null;
   GEO.follow = false;
@@ -3188,6 +3496,7 @@ function onFix(p) {
   }
   drawAccuracy(true);
   ensureLoop();
+  if (prefs.shareLoc !== false) team.share(fix, GEO.heading);
 }
 var accAt = 0;
 function drawAccuracy(force) {
@@ -3406,7 +3715,7 @@ function closeModal() {
 }
 function confirmBox(title, text, yes, fn) {
   modal(
-    `<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="btns"><button class="btn pri" data-m="y">${esc(yes)}</button><button class="btn" data-m="n">Zru\u0161it</button></div>`,
+    `<h2>${esc2(title)}</h2><p>${esc2(text)}</p><div class="btns"><button class="btn pri" data-m="y">${esc2(yes)}</button><button class="btn" data-m="n">Zru\u0161it</button></div>`,
     { y: () => {
       closeModal();
       fn();
@@ -3424,7 +3733,7 @@ function toast(text) {
 }
 function toastAction(text, actions, ms = 5e3) {
   const el = $("#toast");
-  el.innerHTML = `<span>${esc(text)}</span>` + actions.map((a, i) => `<button type="button" data-i="${i}">${esc(a.label)}</button>`).join("");
+  el.innerHTML = `<span>${esc2(text)}</span>` + actions.map((a, i) => `<button type="button" data-i="${i}">${esc2(a.label)}</button>`).join("");
   el.classList.add("act");
   el.hidden = false;
   el.onclick = (ev) => {
@@ -3466,9 +3775,9 @@ function renderPanel() {
 var stepper = (label) => `<div class="stepper"><label>${label}</label><button data-act="fl-">\u2212</button><input data-f="flyers-now" type="number" min="0" inputmode="numeric" value="${state.flyers}"><button data-act="fl+">+</button></div>`;
 var histHtml = (list) => list.length ? `<ul class="hist">${list.map((v) => {
   const e = v.target_type === "entrance" ? store.raw("entrances", v.target_id) : null;
-  return `<li data-status="${v.status || "none"}"><i></i><div><b>${esc(STATUS[v.status || "none"].label)}</b>${e ? " \xB7 vchod " + esc(e.label || "") : ""}${v.flyers ? ` \xB7 ${v.flyers > 0 ? "+" : ""}${v.flyers} ks` : ""}
-    <small>${fmtTime(v.visited_at)}${v.entrances_done != null ? ` \xB7 hotov\xFDch vchod\u016F: ${v.entrances_done}` : ""}${v.note ? " \xB7 " + esc(v.note) : ""}</small></div>
-    <button data-act="visit-del" data-id="${esc(v.id)}" title="Smazat z\xE1znam">\u2715</button></li>`;
+  return `<li data-status="${v.status || "none"}"><i></i><div><b>${esc2(STATUS[v.status || "none"].label)}</b>${e ? " \xB7 vchod " + esc2(e.label || "") : ""}${v.flyers ? ` \xB7 ${v.flyers > 0 ? "+" : ""}${v.flyers} ks` : ""}
+    <small>${fmtTime(v.visited_at)}${v.entrances_done != null ? ` \xB7 hotov\xFDch vchod\u016F: ${v.entrances_done}` : ""}${v.note ? " \xB7 " + esc2(v.note) : ""}</small></div>
+    <button data-act="visit-del" data-id="${esc2(v.id)}" title="Smazat z\xE1znam">\u2715</button></li>`;
 }).join("")}</ul>` : '<p class="hint">Zat\xEDm \u017E\xE1dn\xE1 n\xE1v\u0161t\u011Bva.</p>';
 function buildingHtml(id) {
   const v = view(id);
@@ -3481,8 +3790,8 @@ function buildingHtml(id) {
   const sugg = v.d.addrs.length > 1 && !ents.length;
   const osm = v.b && v.b.osm_id ? `<a href="https://www.openstreetmap.org/${v.b.osm_type}/${v.b.osm_id}" target="_blank" rel="noopener">OSM ${v.b.osm_type} ${v.b.osm_id}</a>` : "ru\u010Dn\u011B p\u0159idan\xFD objekt";
   return `<button class="back" data-act="back">\u2039 Zp\u011Bt na p\u0159ehled</button>
-  <h2>${esc(titleOf(v))}</h2>
-  <p class="sub">${esc(typeLabel(v.building_type))}${v.municipality ? " \xB7 " + esc(v.municipality) : ""}</p>
+  <h2>${esc2(titleOf(v))}</h2>
+  <p class="sub">${esc2(typeLabel(v.building_type))}${v.municipality ? " \xB7 " + esc2(v.municipality) : ""}</p>
   ${stepper("Let\xE1k\u016F p\u0159i t\xE9to n\xE1v\u0161t\u011Bv\u011B")}
   <div class="status-grid">${sbtns(v.status, "b-status")}</div>
   <p class="hint">Klepnut\xEDm na stav se v\u0161e hned ulo\u017E\xED i s dne\u0161n\xEDm datem.${ents.length ? " U domu s vchody se stav budovy dopo\u010D\xEDt\xE1v\xE1 z vchod\u016F." : ""}</p>
@@ -3492,8 +3801,8 @@ function buildingHtml(id) {
   </div>
 
   <h3>Vchody${ents.length ? ` (${ents.filter((e) => e.status === "done").length}/${ents.length} hotovo)` : ""}</h3>
-  ${ents.map((e) => `<div class="ent" data-eid="${esc(e.id)}">
-      <div class="ent-head"><input data-f="e-label" value="${esc(e.label)}" placeholder="Ozna\u010Den\xED vchodu" aria-label="Ozna\u010Den\xED vchodu">
+  ${ents.map((e) => `<div class="ent" data-eid="${esc2(e.id)}">
+      <div class="ent-head"><input data-f="e-label" value="${esc2(e.label)}" placeholder="Ozna\u010Den\xED vchodu" aria-label="Ozna\u010Den\xED vchodu">
         <input class="num" data-f="e-flyers" type="number" min="0" inputmode="numeric" value="${e.flyers || 0}" title="Let\xE1k\u016F u vchodu" aria-label="Let\xE1k\u016F u vchodu">
         <button data-act="e-del" title="Odebrat vchod">\u2715</button></div>
       <div class="dots">${ORDER.map((k) => `<button class="sbtn s ${e.status === k ? "on" : ""}" data-status="${k}" data-act="e-status" title="${STATUS[k].label}"><i></i></button>`).join("")}</div>
@@ -3504,18 +3813,18 @@ function buildingHtml(id) {
   ${ents.length ? '<p class="hint">\u010C\xEDslo u vchodu = po\u010Det let\xE1k\u016F, kter\xE9 tam skon\u010Dily.</p>' : ""}
 
   <h3>\xDAdaje o budov\u011B</h3>
-  <label class="field"><span>Adresa${v.d.address ? "" : " (v map\u011B chyb\xED \u2013 dopl\u0148 ru\u010Dn\u011B)"}</span><input data-f="address" value="${esc(v.address)}" placeholder="Ulice a \u010D\xEDslo"></label>
-  <label class="field"><span>N\xE1zev / ozna\u010Den\xED</span><input data-f="name" value="${esc(v.name)}" placeholder="nap\u0159. Panel\xE1k u \u0161koly"></label>
+  <label class="field"><span>Adresa${v.d.address ? "" : " (v map\u011B chyb\xED \u2013 dopl\u0148 ru\u010Dn\u011B)"}</span><input data-f="address" value="${esc2(v.address)}" placeholder="Ulice a \u010D\xEDslo"></label>
+  <label class="field"><span>N\xE1zev / ozna\u010Den\xED</span><input data-f="name" value="${esc2(v.name)}" placeholder="nap\u0159. Panel\xE1k u \u0161koly"></label>
   <div class="two">
-    <label class="field"><span>Obec</span><input data-f="municipality" value="${esc(v.municipality)}" list="muni-list"></label>
+    <label class="field"><span>Obec</span><input data-f="municipality" value="${esc2(v.municipality)}" list="muni-list"></label>
     <label class="field"><span>Po\u010Det vchod\u016F</span><input data-f="entrances_count" type="number" min="0" inputmode="numeric" value="${r.entrances_count != null ? r.entrances_count : ents.length || (v.d.addrs.length > 1 ? v.d.addrs.length : "")}"></label>
   </div>
-  <datalist id="muni-list">${state.places.map((p) => `<option value="${esc(p.name)}">`).join("")}</datalist>
+  <datalist id="muni-list">${state.places.map((p) => `<option value="${esc2(p.name)}">`).join("")}</datalist>
   <div class="two">
-    <label class="field"><span>Typ budovy</span><select data-f="building_type">${types.map(([k, l]) => `<option value="${esc(k)}" ${k === v.building_type ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
-    <label class="field"><span>Datum posledn\xEDho roznosu</span><input data-f="last_visit" type="date" value="${esc(r.last_visit || "")}"></label>
+    <label class="field"><span>Typ budovy</span><select data-f="building_type">${types.map(([k, l]) => `<option value="${esc2(k)}" ${k === v.building_type ? "selected" : ""}>${esc2(l)}</option>`).join("")}</select></label>
+    <label class="field"><span>Datum posledn\xEDho roznosu</span><input data-f="last_visit" type="date" value="${esc2(r.last_visit || "")}"></label>
   </div>
-  <label class="field"><span>Pozn\xE1mky</span><textarea data-f="notes" placeholder="Zam\u010Den\xFD vchod, pes, schr\xE1nky uvnit\u0159\u2026">${esc(r.notes || "")}</textarea></label>
+  <label class="field"><span>Pozn\xE1mky</span><textarea data-f="notes" placeholder="Zam\u010Den\xFD vchod, pes, schr\xE1nky uvnit\u0159\u2026">${esc2(r.notes || "")}</textarea></label>
 
   <h3>Historie n\xE1v\u0161t\u011Bv</h3>
   ${histHtml(hist)}
@@ -3531,8 +3840,8 @@ function areaHtml(id) {
   inside.forEach((bid) => cnt[statusOf(bid)]++);
   const hist = visitsOf((x) => x.target_id === id);
   return `<button class="back" data-act="back">\u2039 Zp\u011Bt na p\u0159ehled</button>
-  <h2>${esc(a.name || (a.kind === "street" ? "Ulice" : "Oblast"))}</h2>
-  <p class="sub">${a.kind === "street" ? "Ulice" : "Obkreslen\xE1 oblast"}${a.municipality ? " \xB7 " + esc(a.municipality) : ""}</p>
+  <h2>${esc2(a.name || (a.kind === "street" ? "Ulice" : "Oblast"))}</h2>
+  <p class="sub">${a.kind === "street" ? "Ulice" : "Obkreslen\xE1 oblast"}${a.municipality ? " \xB7 " + esc2(a.municipality) : ""}</p>
   <div class="status-grid">${sbtns(a.status, "a-status")}</div>
   ${stepper("Let\xE1k\u016F nav\xEDc (mimo budovy)")}
   <p class="hint">Stav ${a.kind === "street" ? "ulice" : "oblasti"} je samostatn\xFD \u2013 stavy jednotliv\xFDch budov nem\u011Bn\xED. Let\xE1ky sem pi\u0161 jen pokud je neeviduje\u0161 u budov, jinak by se po\u010D\xEDtaly dvakr\xE1t.</p>
@@ -3545,13 +3854,13 @@ function areaHtml(id) {
   ${inside.length ? `<div class="status-grid" style="margin-top:8px">${sbtns("", "a-bulk", "s", ["done", "partial", "revisit", "none"])}</div><p class="hint">\u2191 Hromadn\u011B nastav\xED stav budov\xE1m (p\u0159ed proveden\xEDm se zept\xE1).</p>` : ""}
 
   <h3>\xDAdaje</h3>
-  <label class="field"><span>N\xE1zev</span><input data-f="a-name" value="${esc(a.name || "")}"></label>
+  <label class="field"><span>N\xE1zev</span><input data-f="a-name" value="${esc2(a.name || "")}"></label>
   <div class="two">
-    <label class="field"><span>Obec</span><input data-f="a-municipality" value="${esc(a.municipality || "")}" list="muni-list"></label>
-    <label class="field"><span>Datum roznosu</span><input data-f="a-last_visit" type="date" value="${esc(a.last_visit || "")}"></label>
+    <label class="field"><span>Obec</span><input data-f="a-municipality" value="${esc2(a.municipality || "")}" list="muni-list"></label>
+    <label class="field"><span>Datum roznosu</span><input data-f="a-last_visit" type="date" value="${esc2(a.last_visit || "")}"></label>
   </div>
-  <datalist id="muni-list">${state.places.map((p) => `<option value="${esc(p.name)}">`).join("")}</datalist>
-  <label class="field"><span>Pozn\xE1mky</span><textarea data-f="a-notes">${esc(a.notes || "")}</textarea></label>
+  <datalist id="muni-list">${state.places.map((p) => `<option value="${esc2(p.name)}">`).join("")}</datalist>
+  <label class="field"><span>Pozn\xE1mky</span><textarea data-f="a-notes">${esc2(a.notes || "")}</textarea></label>
   <h3>Historie</h3>${histHtml(hist)}
   <div class="btns" style="margin-top:16px"><button class="btn sm danger" data-act="a-del">Smazat ${a.kind === "street" ? "ulici" : "oblast"}</button></div>`;
 }
@@ -3595,7 +3904,7 @@ function overviewHtml() {
   const visits = store.all("visits").filter((v) => !f.muni || v.municipality === f.muni);
   const c = (st) => recs.filter((r) => r.status === st).length;
   const sum = visits.reduce((x, v) => x + (v.flyers || 0), 0);
-  return `${f.muni ? `<p class="sub">Filtr: <b>${esc(f.muni)}</b> \xB7 <a href="#" data-act="muni-clear">zru\u0161it</a></p>` : ""}` + card(isDesk() ? "" : "P\u0159ehled", "dashboard", `<div class="facts" style="margin:0">
+  return `${f.muni ? `<p class="sub">Filtr: <b>${esc2(f.muni)}</b> \xB7 <a href="#" data-act="muni-clear">zru\u0161it</a></p>` : ""}` + card(isDesk() ? "" : "P\u0159ehled", "dashboard", `<div class="facts" style="margin:0">
     <div class="fact big"><b>${num(sum)}</b><span>Let\xE1k\u016F rozneseno celkem</span></div>
     <div class="fact"><b>${c("done")}</b><span>Dokon\u010Den\xFDch budov</span></div>
     <div class="fact"><b>${c("partial")}</b><span>\u010C\xE1ste\u010Dn\u011B hotov\xFDch budov</span></div>
@@ -3631,7 +3940,7 @@ function chartsHtml() {
     <div class="fact"><b>${places(vt)}</b><span>Nav\u0161t\xEDven\xFDch m\xEDst dnes</span></div>
     <div class="fact"><b>${num(sum(vw))}</b><span>Let\xE1k\u016F za 7 dn\xED</span></div>
     <div class="fact"><b>${places(vw)}</b><span>Nav\u0161t\xEDven\xFDch m\xEDst za 7 dn\xED</span></div></div>`) + card("Pokryt\xED podle obc\xED", "map", rows.length ? `<div style="overflow-x:auto"><table class="cov"><tr><th>Obec</th><th>Hotovo</th><th>\u010C\xE1st.</th><th>Znovu</th><th>Let\xE1k\u016F</th></tr>
-    ${rows.map(([name, x]) => `<tr data-act="muni-pick" data-muni="${esc(name)}"><td>${esc(name)}${x.loaded ? `<div class="bar"><i style="width:${Math.min(100, x.done / x.loaded * 100).toFixed(1)}%"></i></div>` : ""}</td><td>${x.done}</td><td>${x.partial}</td><td>${x.revisit}</td><td>${num(x.flyers)}</td></tr>`).join("")}</table></div>
+    ${rows.map(([name, x]) => `<tr data-act="muni-pick" data-muni="${esc2(name)}"><td>${esc2(name)}${x.loaded ? `<div class="bar"><i style="width:${Math.min(100, x.done / x.loaded * 100).toFixed(1)}%"></i></div>` : ""}</td><td>${x.done}</td><td>${x.partial}</td><td>${x.revisit}</td><td>${num(x.flyers)}</td></tr>`).join("")}</table></div>
     <p class="hint">Prou\u017Eek = hotov\xE9 budovy z t\u011Bch, kter\xE9 jsou pr\xE1v\u011B na\u010Dten\xE9 v map\u011B. Obec se ur\u010Duje z adresy v OpenStreetMap, jinak podle nejbli\u017E\u0161\xEDho s\xEDdla \u2013 ne podle katastr\xE1ln\xEDch hranic. Klepnut\xEDm na obec ji vyfiltruje\u0161.</p>` : '<p class="hint">Zat\xEDm nic. Klepni v map\u011B na budovu a vyber stav.</p>');
 }
 function listHtml() {
@@ -3650,15 +3959,15 @@ function listHtml() {
   }
   items.sort((x, y) => ((y.date || "") + (y.upd || "")).localeCompare((x.date || "") + (x.upd || "")));
   const munis = [...new Set([...state.places.map((p) => p.name), ...store.all("building_records").map((r) => r.municipality), ...store.all("areas").map((a) => a.municipality)].filter(Boolean))].sort((a, b) => a.localeCompare(b, "cs"));
-  return `<section class="card">${isDesk() ? "" : `<div class="card-h">${svg("list")}<h4>Z\xE1znamy</h4></div>`}<label class="field"><span>Hledat v evidenci (adresa, ulice, pozn\xE1mka)</span><input data-f="q" type="search" value="${esc(f.q)}" placeholder="nap\u0159. Fri\u010Dova"></label>
-  <label class="field"><span>Obec</span><select data-f="muni"><option value="">V\u0161echny obce</option>${munis.map((n) => `<option ${n === f.muni ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
+  return `<section class="card">${isDesk() ? "" : `<div class="card-h">${svg("list")}<h4>Z\xE1znamy</h4></div>`}<label class="field"><span>Hledat v evidenci (adresa, ulice, pozn\xE1mka)</span><input data-f="q" type="search" value="${esc2(f.q)}" placeholder="nap\u0159. Fri\u010Dova"></label>
+  <label class="field"><span>Obec</span><select data-f="muni"><option value="">V\u0161echny obce</option>${munis.map((n) => `<option ${n === f.muni ? "selected" : ""}>${esc2(n)}</option>`).join("")}</select></label>
   <div class="two">
-    <label class="field"><span>Roznos od</span><input data-f="from" type="date" value="${esc(f.from)}"></label>
-    <label class="field"><span>do</span><input data-f="to" type="date" value="${esc(f.to)}"></label>
+    <label class="field"><span>Roznos od</span><input data-f="from" type="date" value="${esc2(f.from)}"></label>
+    <label class="field"><span>do</span><input data-f="to" type="date" value="${esc2(f.to)}"></label>
   </div>
   <p class="hint">Stav filtruj barevn\xFDmi \u0161t\xEDtky u mapy. Filtry plat\xED i pro mapu.${f.q || f.muni || f.from || f.to || f.status.size < 4 ? ' <a href="#" data-act="filter-clear">Zru\u0161it filtry</a>' : ""}</p>
   <h3>Z\xE1znamy (${items.length})</h3>
-  <ul class="rows">${items.slice(0, 300).map((i) => `<li><button data-act="open" data-type="${i.type}" data-id="${esc(i.id)}" data-status="${i.status}"><i></i><span><b>${esc(i.title)}</b><small>${esc(i.sub)}</small></span><em>${i.date ? fmtDate(i.date) : ""}</em></button></li>`).join("")}</ul>
+  <ul class="rows">${items.slice(0, 300).map((i) => `<li><button data-act="open" data-type="${i.type}" data-id="${esc2(i.id)}" data-status="${i.status}"><i></i><span><b>${esc2(i.title)}</b><small>${esc2(i.sub)}</small></span><em>${i.date ? fmtDate(i.date) : ""}</em></button></li>`).join("")}</ul>
   ${items.length > 300 ? '<p class="hint">Zobrazeno prvn\xEDch 300 \u2013 zp\u0159esni hled\xE1n\xED.</p>' : ""}${items.length ? "" : '<p class="hint">Filtru neodpov\xEDd\xE1 \u017E\xE1dn\xFD z\xE1znam.</p>'}</section>`;
 }
 function sbConfig() {
@@ -3680,10 +3989,10 @@ var segrow = (ico, c, k, title, opts, sub) => opts.length === 2 ? `<div class="s
 var linkrow = (ico, c, act, title, val = "", attrs = "") => `<button type="button" class="sr link" data-act="${act}" ${attrs}>${tileI(ico, c)}<span class="sr-t"><b>${title}</b></span>${val ? `<span class="sr-v">${val}</span>` : ""}${svg("chev", "ico sr-chev")}</button>`;
 var kv = (k, v) => `<div class="sr kv"><span>${k}</span><b>${v}</b></div>`;
 var sgroup = (id, title, body, foot) => `<h5 class="sg-h" id="sg-${id}">${title}</h5><div class="sg" data-g="${id}">${body}</div>${foot ? `<p class="sg-f">${foot}</p>` : ""}`;
-var SYNC_TONE = { synced: "ok", syncing: "busy", pending: "busy", offline: "warn", error: "bad", conflict: "bad", local: "", login: "" };
+var SYNC_TONE = { synced: "ok", syncing: "busy", pending: "busy", offline: "warn", error: "bad", conflict: "bad", local: "", login: "", outsider: "warn" };
 function syncState() {
   const c = sbConfig();
-  return !c ? "local" : !session ? "login" : store.state;
+  return !c ? "local" : !session ? "login" : team.mode === "outsider" ? "outsider" : store.state;
 }
 function errText(e) {
   const m = String(e && (e.message || e.error_description || e.msg) || e || "");
@@ -3708,15 +4017,16 @@ function accountGroup() {
     );
   }
   const open = !!state.acctOpen, pend = store.pending(), email = session.user.email || "\xDA\u010Det";
-  const at = email.indexOf("@"), nameP = at > 0 ? email.slice(0, at) : email;
+  const at = email.indexOf("@"), nameP = team.me && team.me.name ? team.me.name : at > 0 ? email.slice(0, at) : email;
   const when = store.lastSync && st === "synced" ? " \xB7 " + fmtTime(store.lastSync.toISOString()).split(" ").pop() : pend && st !== "synced" ? ` \xB7 ${num(pend)} \u010Dek\xE1` : "";
-  let body = `<button type="button" class="acct-row" data-act="acct-toggle" aria-expanded="${open}" aria-label="\xDA\u010Det ${esc(email)}, ${esc(SYNC_LABEL[st])}"><span class="av">${esc(initials())}</span>
-    <span class="sr-t"><b>${esc(nameP)}</b><small class="sync-line" data-tone="${SYNC_TONE[st] || ""}"><i></i>${esc(SYNC_LABEL[st])}${esc(when)}</small></span>${svg("chev", "ico sr-chev acct-chev")}</button>`;
+  let body = `<button type="button" class="acct-row" data-act="acct-toggle" aria-expanded="${open}" aria-label="\xDA\u010Det ${esc2(email)}, ${esc2(SYNC_LABEL[st])}"><span class="av">${esc2(initials())}</span>
+    <span class="sr-t"><b>${esc2(nameP)}</b><small class="sync-line" data-tone="${SYNC_TONE[st] || ""}"><i></i>${esc2(SYNC_LABEL[st])}${esc2(when)}</small></span>${svg("chev", "ico sr-chev acct-chev")}</button>`;
   if (open) {
-    body += `<div class="acct-more">${kv("E-mail", esc(email))}${kv("P\u0159ipojen\xED", navigator.onLine ? "Online" : '<span class="t-warn">Offline</span>')}
+    body += `<div class="acct-more">${team.me ? kv("Jm\xE9no", `${esc2(team.me.name)} <button type="button" class="mini-link" data-act="my-name">Upravit</button>`) + kv("Role", team.me.role === "admin" ? "Spr\xE1vce" : "\u010Clen t\xFDmu") : ""}${kv("E-mail", esc2(email))}${kv("P\u0159ipojen\xED", navigator.onLine ? "Online" : '<span class="t-warn">Offline</span>')}
       ${kv("Posledn\xED synchronizace", store.lastSync ? fmtTime(store.lastSync.toISOString()) : "Zat\xEDm neprob\u011Bhla")}${kv("Neodeslan\xE9 zm\u011Bny", pend ? `<span class="t-warn">${num(pend)}</span>` : "\u017D\xE1dn\xE9")}
-      ${store.lastError && (st === "error" || st === "offline") ? `<p class="sr-err" role="alert">${esc(errText(store.lastError))}</p>` : ""}
+      ${store.lastError && (st === "error" || st === "offline") ? `<p class="sr-err" role="alert">${esc2(errText(store.lastError))}</p>` : ""}
       ${st === "conflict" ? `<button type="button" class="sr act" data-act="conflicts">${svg("revisit")}<span>Vy\u0159e\u0161it konflikty (${store.conflicts.length})</span></button>` : `<button type="button" class="sr act" data-act="sb-sync" ${st === "syncing" ? "disabled" : ""}>${svg("refresh")}<span>${st === "syncing" ? "Synchronizuji\u2026" : "Synchronizovat te\u010F"}</span></button>`}
+      <button type="button" class="sr act" data-act="pass-change">${svg("key")}<span>Zm\u011Bnit heslo</span></button>
       <button type="button" class="sr act bad" data-act="sb-logout">${svg("logout")}<span>Odhl\xE1sit se</span></button></div>`;
   }
   return sgroup("acct", "\xDA\u010Det a synchronizace", body, open ? "Zm\u011Bna se pova\u017Euje za ulo\u017Eenou a\u017E po potvrzen\xED serverem." : "");
@@ -3724,7 +4034,7 @@ function accountGroup() {
 var gpsGroup = () => sgroup(
   "gps",
   "Sledov\xE1n\xED polohy",
-  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky"),
+  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky") + (team.mode === "member" ? trow("users", "#5856D6", "shareLoc", "Sd\xEDlet polohu s t\xFDmem", "Kolegov\xE9 t\u011B uvid\xED na map\u011B, jen kdy\u017E m\xE1\u0161 zapnutou polohu") : ""),
   "Poloha se m\u011B\u0159\xED jen p\u0159i otev\u0159en\xE9 aplikaci \u2013 na pozad\xED ji iPhone webu nedovol\xED. P\u0159i sledov\xE1n\xED displej nezhasne."
 );
 var mapGroup = () => sgroup(
@@ -3753,7 +4063,7 @@ var aboutGroup = () => sgroup(
   "O aplikaci",
   kv("Verze", APP_VERSION) + linkrow("help", "#007AFF", "help", "N\xE1pov\u011Bda") + `<div class="sr-pad"><p class="sg-note">Mapov\xE1 data \xA9 p\u0159isp\u011Bvatel\xE9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (ODbL) \xB7 Overpass API \xB7 Nominatim \xB7 Leaflet${prefs.basemap !== "osm" ? " \xB7 podklad \xA9 CARTO" : ""}</p></div>`
 );
-var settingsHtml = () => `<div class="set">${accountGroup()}${gpsGroup()}${mapGroup()}${lookGroup()}${dataGroup()}${aboutGroup()}</div>`;
+var settingsHtml = () => `<div class="set">${accountGroup()}${teamGroup()}${gpsGroup()}${mapGroup()}${lookGroup()}${dataGroup()}${aboutGroup()}</div>`;
 function showHelp() {
   modal(`<h2>Jak na to</h2><ol class="help">
     <li><b>Klepni na budovu</b> \u2013 zezelen\xE1 jako rozneseno. Druh\xFDm klepnut\xEDm otev\u0159e\u0161 detail (vchody, pozn\xE1mka, jin\xFD stav).</li>
@@ -3764,6 +4074,362 @@ function showHelp() {
     <li><b>Chyb\u011Bj\xEDc\xED d\u016Fm nebo adresa</b> \u2013 OpenStreetMap nezn\xE1 jednotliv\xE9 byty a u n\u011Bkter\xFDch dom\u016F chyb\xED obrys \u010Di adresa. Dopl\u0148 je tla\u010D\xEDtkem <b>P\u0159idat</b>.</li></ol>
     <div class="btns"><button class="btn pri" data-m="x">Rozum\xEDm</button></div>`, { x: closeModal });
 }
+function teamGroup() {
+  if (!session) return "";
+  if (team.mode === "outsider") {
+    return sgroup("team", "T\xFDm", `<div class="sr-pad"><p class="sg-note"><b>Tv\u016Fj \xFA\u010Det zat\xEDm nen\xED v t\xFDmu.</b> Po\u017E\xE1dej spr\xE1vce, a\u0165 t\u011B p\u0159id\xE1 v Nastaven\xED \u2192 T\xFDm (e-mail ${esc2(session.user.email)}). Pak klepni na \u201EZkusit znovu\u201C.</p></div><button type="button" class="sr act" data-act="team-retry">${svg("refresh")}<span>Zkusit znovu</span></button>`);
+  }
+  if (team.mode !== "member") return "";
+  const now = Date.now(), live = new Map(team.mates().map((r) => [r.user_id, r]));
+  const rows = team.members.map((m) => {
+    const lv = m.user_id && live.get(m.user_id), me = m.user_id === session.user.id;
+    const sub = !m.active ? "Vypnut\xFD p\u0159\xEDstup" : lv && now - Date.parse(lv.updated_at) < LIVE_FRESH ? '<i class="live-dot"></i>Rozn\xE1\u0161\xED te\u010F' : me ? "To jsi ty" : esc2(m.email);
+    const inner = `<span class="mate-av" style="--c:${colorFor(m.user_id || m.email)}">${esc2(initialsOf(m.name))}</span><span class="sr-t"><b>${esc2(m.name)}${m.role === "admin" ? ' <em class="badge-s">Spr\xE1vce</em>' : ""}</b><small>${sub}</small></span>`;
+    return team.isAdmin ? `<button type="button" class="sr link mem" data-act="mem-open" data-email="${esc2(m.email)}">${inner}${svg("chev", "ico sr-chev")}</button>` : `<div class="sr mem">${inner}</div>`;
+  }).join("");
+  return sgroup(
+    "team",
+    `T\xFDm \xB7 ${team.members.filter((m) => m.active).length}`,
+    rows + (team.isAdmin ? linkrow("userplus", "#F93A25", "mem-add", "P\u0159idat \u010Dlena") : ""),
+    team.isAdmin ? "P\u0159id\xE1n\xEDm rovnou vznikne \xFA\u010Det s heslem \u2013 nic se nepos\xEDl\xE1 ani nepotvrzuje." : "\u010Cleny p\u0159id\xE1v\xE1 spr\xE1vce t\xFDmu."
+  );
+}
+async function startTeam() {
+  const s = session;
+  if (!s || !sb) return;
+  if (!store.remote) {
+    store.setRemote(new SupabaseRemote(sb));
+    store.sync();
+  }
+  let mode;
+  try {
+    mode = await Promise.race([team.start(sb, s), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 12e3))]);
+  } catch (e) {
+    console.warn("[t\xFDm]", e);
+    mode = "off";
+  }
+  if (!session || session.user.id !== s.user.id) return;
+  if (mode === "outsider") {
+    store.setRemote(null);
+    showOutsider();
+  }
+  renderSync();
+  updateTeamChip();
+  if (!state.sel) softRender();
+}
+function showOutsider() {
+  if (!$("#modal").hidden) return;
+  modal(
+    `<h2>\xDA\u010Det \u010Dek\xE1 na p\u0159id\xE1n\xED do t\xFDmu</h2><p>P\u0159ihl\xE1sil ses jako <b>${esc2(session.user.email)}</b>, ale tento e-mail zat\xEDm nen\xED v t\xFDmu. Po\u017E\xE1dej spr\xE1vce, a\u0165 t\u011B p\u0159id\xE1 (Nastaven\xED \u2192 T\xFDm). Do t\xE9 doby se evidence ukl\xE1d\xE1 jen do tohoto za\u0159\xEDzen\xED.</p>
+    <div class="btns"><button class="btn pri" data-m="retry">Zkusit znovu</button><button class="btn" data-m="out">Odhl\xE1sit</button><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`,
+    { retry: () => {
+      closeModal();
+      startTeam();
+    }, out: () => {
+      closeModal();
+      logout();
+    }, x: closeModal }
+  );
+}
+function onTeam(what, id) {
+  if (what === "live") updateTeamChip();
+  if (what === "mate-join") toast(`${team.nameOf(id) || "Kolega"} pr\xE1v\u011B rozn\xE1\u0161\xED \u2013 vid\xED\u0161 ho na map\u011B.`);
+  if (what === "mate-click") {
+    const r = team.mates().find((x) => x.user_id === id);
+    if (r) toast(`${r.name || "Kolega"} \xB7 ${agoText(Date.now() - Date.parse(r.updated_at))}`);
+  }
+  if ((what === "members" || what === "live" || what === "mode") && !state.sel && (state.tab === "settings" || !isDesk())) softRender();
+  if (what === "mode") renderSync();
+}
+function updateTeamChip() {
+  const el = $("#team-chip");
+  if (!el) return;
+  const now = Date.now(), m = team.mates(), on = m.filter((r) => now - Date.parse(r.updated_at) < LIVE_FRESH).length;
+  el.hidden = team.mode !== "member" || !m.length;
+  if (el.hidden) return;
+  el.querySelector("span").textContent = on ? `${on} rozn\xE1\u0161\xED` : `${m.length} ned\xE1vno`;
+  el.classList.toggle("on", on > 0);
+}
+function showMates() {
+  const now = Date.now(), m = team.mates();
+  if (!m.length) {
+    toast("Te\u010F nikdo z t\xFDmu nesd\xEDl\xED polohu.");
+    return;
+  }
+  modal(`<h2>Kdo rozn\xE1\u0161\xED</h2><div class="sg mates">${m.map((r) => `<button type="button" class="sr link" data-m="go" data-uid="${esc2(r.user_id)}">${mateHtml(r, now)}${svg("chev", "ico sr-chev")}</button>`).join("")}</div>
+    <p class="hint">Poloha se ukazuje jen \u010Dlen\u016Fm t\xFDmu a jen kdy\u017E m\xE1 kolega zapnutou polohu.</p><div class="btns"><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`, {});
+  $("#modal").onclick = (e) => {
+    const b = e.target.closest("[data-m]");
+    if (!b) return;
+    if (b.dataset.m === "x") {
+      closeModal();
+      return;
+    }
+    if (b.dataset.m === "go") {
+      const r = team.mates().find((x) => x.user_id === b.dataset.uid);
+      closeModal();
+      if (!r) return;
+      if (GEO.follow) {
+        GEO.follow = false;
+        locUi();
+      }
+      map.setView([r.lat, r.lon], Math.max(map.getZoom(), 17), { animate: !reduceMotion() });
+      if (window.innerWidth <= 820) setPanel(false);
+    }
+  };
+}
+var markQueue = /* @__PURE__ */ new Map();
+var markTimer = 0;
+function mateMarked(ev) {
+  const r = store.get(ev.table, ev.id);
+  if (!r) return;
+  const bid = ev.table === "building_records" ? ev.id : ev.table === "entrances" ? r.building_id : null;
+  let ll = null;
+  if (bid && B.has(bid)) ll = [B.get(bid).lat, B.get(bid).lon];
+  else if (ev.table === "areas" && validGeom(r.geometry)) {
+    const c = center(r.geometry);
+    ll = [c.lat, c.lon];
+  }
+  const color = colorFor(ev.by);
+  if (ll && map.getBounds().pad(0.5).contains(ll)) {
+    const f = L.circleMarker(ll, { renderer: svgSketch, interactive: false, radius: 20, color, weight: 3, fill: true, fillColor: color, fillOpacity: 0.15, className: "mate-flash" }).addTo(map);
+    setTimeout(() => f.remove(), 2400);
+  }
+  const q = markQueue.get(ev.by) || { n: 0, last: null };
+  q.n++;
+  q.last = { table: ev.table, id: bid || ev.id, status: r.status };
+  markQueue.set(ev.by, q);
+  clearTimeout(markTimer);
+  markTimer = setTimeout(() => {
+    for (const [by, x] of markQueue) {
+      const who = team.nameOf(by) || "Kolega";
+      if (x.n > 1) toast(`${who} ozna\u010Dil(a) ${x.n} m\xEDst.`);
+      else {
+        const st = STATUS[x.last.status] ? STATUS[x.last.status].label : "Zm\u011Bna";
+        const v = x.last.table === "areas" ? null : view(x.last.id);
+        toast(`${who}: ${st}${v ? " \xB7 " + titleOf(v) : ""}`);
+      }
+    }
+    markQueue.clear();
+  }, 1200);
+}
+var genPassword = () => {
+  const a = "abcdefghjkmnpqrstuvwxyz", d = "23456789";
+  const r = (x) => x[crypto.getRandomValues(new Uint32Array(1))[0] % x.length];
+  let p = "";
+  for (let i = 0; i < 6; i++) p += r(a);
+  return p.slice(0, 3) + "-" + p.slice(3) + "-" + r(d) + r(d);
+};
+var pwField = (id, label) => `<label class="field pw"><span>${label}</span><div class="pw-row"><input id="${id}" type="text" autocomplete="new-password" autocapitalize="off" spellcheck="false" placeholder="Alespo\u0148 8 znak\u016F"><button type="button" class="tbtn soft" data-gen="${id}">Vymyslet</button></div></label>`;
+function memberForm(m) {
+  const isNew = !m;
+  const self = m && m.user_id === session.user.id;
+  modal(`<h2>${isNew ? "P\u0159idat \u010Dlena t\xFDmu" : esc2(m.name)}</h2>${isNew ? "<p>\xDA\u010Det vznikne hned \u2013 kolega se p\u0159ihl\xE1s\xED e-mailem a heslem, kter\xE9 tady zad\xE1\u0161. Nic se nepos\xEDl\xE1 ani nepotvrzuje.</p>" : ""}
+    <label class="field"><span>Jm\xE9no (uk\xE1\u017Ee se nad polohou)</span><input id="mf-name" maxlength="40" value="${esc2(m ? m.name : "")}" placeholder="nap\u0159. Honza"></label>
+    <label class="field"><span>E-mail (slou\u017E\xED k p\u0159ihl\xE1\u0161en\xED)</span><input id="mf-email" type="email" autocapitalize="off" spellcheck="false" value="${esc2(m ? m.email : "")}" ${isNew ? "" : "readonly"} placeholder="jmeno@email.cz"></label>
+    ${isNew ? pwField("mf-pass", "Heslo") : ""}
+    <div class="field"><span>Role</span><div class="seg" role="radiogroup" id="mf-role">${[["member", "\u010Clen"], ["admin", "Spr\xE1vce"]].map(([v, t]) => `<button type="button" role="radio" class="${(m ? m.role : "member") === v ? "on" : ""}" aria-checked="${(m ? m.role : "member") === v}" data-v="${v}">${t}</button>`).join("")}</div></div>
+    ${!isNew && !self ? `<details class="mf-pw"><summary>Zapomn\u011Bl heslo? Nastavit nov\xE9</summary>${pwField("mf-newpass", "Nov\xE9 heslo")}<button type="button" class="btn sm" data-m="setpw">Nastavit heslo</button></details>` : ""}
+    <p class="lg-err" id="mf-err" role="alert" hidden></p>
+    <div class="btns"><button class="btn pri" data-m="save">${isNew ? "P\u0159idat a zalo\u017Eit \xFA\u010Det" : "Ulo\u017Eit"}</button>${!isNew && !self ? '<button class="btn danger" data-m="del">Odebrat z t\xFDmu</button>' : ""}<button class="btn" data-m="x">Zru\u0161it</button></div>`, {});
+  const err = (t) => {
+    const e = $("#mf-err");
+    e.textContent = t;
+    e.hidden = !t;
+  };
+  $("#mf-role").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    $("#mf-role").querySelectorAll("button").forEach((x) => {
+      x.classList.toggle("on", x === b);
+      x.setAttribute("aria-checked", String(x === b));
+    });
+  };
+  let busy = false;
+  $("#modal").onclick = async (e) => {
+    const g = e.target.closest("[data-gen]");
+    if (g) {
+      $("#" + g.dataset.gen).value = genPassword();
+      return;
+    }
+    const b = e.target.closest("[data-m]");
+    if (!b || busy) return;
+    if (b.dataset.m === "x") {
+      closeModal();
+      return;
+    }
+    if (b.dataset.m === "del") {
+      if (!b.classList.contains("sure")) {
+        b.classList.add("sure");
+        b.textContent = "Opravdu odebrat? Sma\u017Ee se i jeho \xFA\u010Det";
+        return;
+      }
+      busy = true;
+      try {
+        await team.removeMember(m.email);
+        closeModal();
+        toast(`${m.name} u\u017E nem\xE1 p\u0159\xEDstup.`);
+      } catch (x) {
+        err(teamErr(x));
+      } finally {
+        busy = false;
+      }
+      return;
+    }
+    if (b.dataset.m === "setpw") {
+      const pw2 = $("#mf-newpass").value;
+      if (pw2.length < 8) {
+        err("Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F.");
+        return;
+      }
+      busy = true;
+      b.disabled = true;
+      try {
+        await team.setMemberPassword(m.email, pw2);
+        showCredentials(m.name, m.email, pw2, true);
+      } catch (x) {
+        err(teamErr(x));
+        b.disabled = false;
+      } finally {
+        busy = false;
+      }
+      return;
+    }
+    const name = $("#mf-name").value.trim(), email = $("#mf-email").value.trim().toLowerCase();
+    const role = $("#mf-role .on") ? $("#mf-role .on").dataset.v : "member";
+    if (!name) {
+      err("Vypl\u0148 jm\xE9no.");
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      err("Zadej platn\xFD e-mail.");
+      return;
+    }
+    if (isNew && team.members.some((x) => x.email === email)) {
+      err("Tento e-mail u\u017E v t\xFDmu je.");
+      return;
+    }
+    const pw = isNew ? $("#mf-pass").value : "";
+    if (isNew && pw.length < 8) {
+      err("Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F (nebo klepni na \u201EVymyslet\u201C).");
+      return;
+    }
+    busy = true;
+    b.disabled = true;
+    try {
+      if (isNew) {
+        await team.addMember({ email, name, role, password: pw });
+        showCredentials(name, email, pw);
+      } else {
+        await team.updateMember(m.email, { name, role });
+        closeModal();
+        toast("Ulo\u017Eeno.");
+      }
+    } catch (x) {
+      err(teamErr(x));
+      b.disabled = false;
+    } finally {
+      busy = false;
+    }
+  };
+}
+var credText = (name, email, pw) => `Ahoj ${name}, tady m\xE1\u0161 p\u0159\xEDstup do aplikace Rozvez.to na roznos let\xE1k\u016F:
+${appUrl()}
+E-mail: ${email}
+Heslo: ${pw}
+Heslo si m\u016F\u017Ee\u0161 zm\u011Bnit v Nastaven\xED \u2192 \xDA\u010Det.`;
+function showCredentials(name, email, pw, reset) {
+  modal(`<h2>${reset ? "Heslo zm\u011Bn\u011Bno" : `${esc2(name)} je v t\xFDmu`}</h2><p>${reset ? "Nov\xE9 p\u0159ihla\u0161ovac\xED \xFAdaje" : "\xDA\u010Det je hotov\xFD. P\u0159ihla\u0161ovac\xED \xFAdaje"} \u2013 p\u0159edej je kolegovi (t\u0159eba zpr\xE1vou). Heslo si pak m\u016F\u017Ee zm\u011Bnit s\xE1m.</p>
+    <pre class="invite">${esc2(credText(name, email, pw))}</pre>
+    <div class="btns"><button class="btn pri" data-m="copy">${svg("copy")}Kop\xEDrovat</button>${navigator.share ? '<button class="btn" data-m="share">Sd\xEDlet\u2026</button>' : ""}<button class="btn" data-m="x">Hotovo</button></div>`, {
+    copy: async () => {
+      try {
+        await navigator.clipboard.writeText(credText(name, email, pw));
+        toast("Zkop\xEDrov\xE1no.");
+      } catch (e) {
+        toast("Kop\xEDrov\xE1n\xED nejde \u2013 ozna\u010D text a zkop\xEDruj ho ru\u010Dn\u011B.");
+      }
+    },
+    share: () => navigator.share({ text: credText(name, email, pw) }).catch(() => {
+    }),
+    x: closeModal
+  });
+}
+function teamErr(e) {
+  const m = String(e && (e.message || e.details) || e || "");
+  if (/alespoň jeden správce/i.test(m)) return "V t\xFDmu mus\xED z\u016Fstat alespo\u0148 jeden spr\xE1vce.";
+  if (/alespoň 8|Sám sebe|Neplatný e-mail|nesmí být prázdné|není v týmu|Jen správce/i.test(m)) return m;
+  if (/rzt_add_member|PGRST202|Could not find the function/i.test(m)) return "V datab\xE1zi chyb\xED nov\xE1 verze team.sql \u2013 spus\u0165 ji v Supabase (SQL Editor).";
+  if (/row-level|permission|42501/i.test(m)) return "Na tohle nem\xE1\u0161 opr\xE1vn\u011Bn\xED (jen spr\xE1vce).";
+  if (/duplicate|23505/i.test(m)) return "Tento e-mail u\u017E v t\xFDmu je.";
+  if (!navigator.onLine || /fetch|network/i.test(m)) return "Nejde se spojit se serverem.";
+  return "Nepovedlo se: " + m.slice(0, 120);
+}
+function passwordForm() {
+  modal(`<h2>Zm\u011Bnit heslo</h2><p>Nov\xE9 heslo plat\xED pro v\u0161echna tv\xE1 za\u0159\xEDzen\xED.</p>
+    <label class="field pw"><span>Nov\xE9 heslo</span><input id="pf-pass" type="password" autocomplete="new-password" placeholder="Alespo\u0148 8 znak\u016F"></label>
+    <p class="lg-err" id="pf-err" role="alert" hidden></p>
+    <div class="btns"><button class="btn pri" data-m="save">Ulo\u017Eit heslo</button><button class="btn" data-m="x">Zru\u0161it</button></div>`, {});
+  let busy = false;
+  $("#modal").onclick = async (e) => {
+    const b = e.target.closest("[data-m]");
+    if (!b || busy) return;
+    if (b.dataset.m === "x") {
+      closeModal();
+      return;
+    }
+    const v = $("#pf-pass").value, er = $("#pf-err");
+    if (v.length < 8) {
+      er.textContent = "Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F.";
+      er.hidden = false;
+      return;
+    }
+    busy = true;
+    b.disabled = true;
+    const { error } = await sb.auth.updateUser({ password: v });
+    busy = false;
+    b.disabled = false;
+    if (error) {
+      er.textContent = authErr(error);
+      er.hidden = false;
+      return;
+    }
+    closeModal();
+    toast("Heslo zm\u011Bn\u011Bno.");
+  };
+}
+function nameForm() {
+  modal(`<h2>Tvoje jm\xE9no</h2><p>Ukazuje se koleg\u016Fm nad tvou polohou a u toho, co ozna\u010D\xED\u0161.</p>
+    <label class="field"><span>Jm\xE9no</span><input id="nf-name" maxlength="40" value="${esc2(team.me ? team.me.name : "")}"></label>
+    <p class="lg-err" id="nf-err" role="alert" hidden></p>
+    <div class="btns"><button class="btn pri" data-m="save">Ulo\u017Eit</button><button class="btn" data-m="x">Zru\u0161it</button></div>`, {});
+  $("#modal").onclick = async (e) => {
+    const b = e.target.closest("[data-m]");
+    if (!b) return;
+    if (b.dataset.m === "x") {
+      closeModal();
+      return;
+    }
+    const v = $("#nf-name").value.trim(), er = $("#nf-err");
+    if (!v) {
+      er.textContent = "Vypl\u0148 jm\xE9no.";
+      er.hidden = false;
+      return;
+    }
+    b.disabled = true;
+    try {
+      await team.setMyName(v);
+      closeModal();
+      toast("Jm\xE9no ulo\u017Eeno.");
+      renderPanel();
+    } catch (x) {
+      er.textContent = teamErr(x);
+      er.hidden = false;
+      b.disabled = false;
+    }
+  };
+}
+$("#team-chip").addEventListener("click", showMates);
 function applyPref(k) {
   if (k === "gpsMode") geoRestart();
   else if (k === "autoFollow") {
@@ -3782,6 +4448,13 @@ function applyPref(k) {
   else if (k === "icons") updateIcons();
   else if (k === "areas") {
     for (const a of store.all("areas")) drawArea(a.id);
+  } else if (k === "shareLoc") {
+    if (!prefs.shareLoc) team.stopShare().catch(() => {
+    });
+    else if (GEO.fix) {
+      team.sentAt = 0;
+      team.share(GEO.fix, GEO.heading);
+    }
   } else if (k === "quick") toast(prefs.quick ? "Klepnut\xED na budovu ji rovnou ozna\u010D\xED." : "Klepnut\xED na budovu otev\u0159e detail.");
   if (["gpsMode", "basemap"].includes(k) && !state.sel) softRender();
 }
@@ -3815,25 +4488,26 @@ function rowValue(t) {
   }
   if (t === "map") return num(B.size) + " budov";
   if (t === "list") return num(store.all("building_records").length + store.all("areas").length);
-  if (t === "settings") return session ? SYNC_SHORT[store.state] || "" : sbConfig() ? "Nep\u0159ihl\xE1\u0161en" : "Jen v za\u0159\xEDzen\xED";
+  if (t === "settings") return session ? SYNC_SHORT[syncState()] || "" : sbConfig() ? "Nep\u0159ihl\xE1\u0161en" : "Jen v za\u0159\xEDzen\xED";
   return "";
 }
 function initials() {
   if (!session || !session.user || !session.user.email) return "?";
+  if (team.me && team.me.name) return initialsOf(team.me.name);
   const parts = session.user.email.split("@")[0].split(/[._-]+/).filter(Boolean);
   return ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
 }
 var accHtml = (s) => {
   const open = state.tab === s.t;
   return `<div class="acc ${open ? "open" : ""}" data-sec="${s.t}"><button class="acc-h" type="button" data-act="acc" data-tab="${s.t}" aria-expanded="${open}">
-    <span class="tile" style="--c:${s.c}">${svg(s.ico)}</span><span class="acc-l">${s.label}</span><span class="acc-v">${esc(rowValue(s.t))}</span>${svg("chev", "ico acc-chev")}</button>
+    <span class="tile" style="--c:${s.c}">${svg(s.ico)}</span><span class="acc-l">${s.label}</span><span class="acc-v">${esc2(rowValue(s.t))}</span>${svg("chev", "ico acc-chev")}</button>
     <div class="acc-b"><div class="acc-in"><div class="acc-pad">${open ? VIEWS[s.t]() : ""}</div></div></div></div>`;
 };
 function sidebarHtml() {
   const em = session && session.user && session.user.email ? session.user.email : "";
-  const who = em ? esc(em.split("@")[0]) : "Nep\u0159ihl\xE1\u0161en";
-  return `<button class="acct" type="button" data-act="acc-open" data-tab="settings"><span class="av">${esc(initials())}</span>
-      <span class="acct-t"><b>${who}</b><small>\xDA\u010Det a synchronizace \xB7 ${esc(rowValue("settings"))}</small></span>${svg("chev", "ico acc-chev")}</button>` + SECTIONS.map((g) => `<div class="sgroup">${g.map(accHtml).join("")}</div>`).join("");
+  const who = em ? esc2(em.split("@")[0]) : "Nep\u0159ihl\xE1\u0161en";
+  return `<button class="acct" type="button" data-act="acc-open" data-tab="settings"><span class="av">${esc2(initials())}</span>
+      <span class="acct-t"><b>${who}</b><small>\xDA\u010Det a synchronizace \xB7 ${esc2(rowValue("settings"))}</small></span>${svg("chev", "ico acc-chev")}</button>` + SECTIONS.map((g) => `<div class="sgroup">${g.map(accHtml).join("")}</div>`).join("");
 }
 function toggleSection(tt) {
   const body = $("#panel-body"), cur = state.tab;
@@ -3996,6 +4670,23 @@ $("#panel-body").addEventListener("click", (e) => {
     case "acct-toggle":
       state.acctOpen = !state.acctOpen;
       renderPanel();
+      break;
+    case "mem-add":
+      memberForm(null);
+      break;
+    case "mem-open": {
+      const m = team.members.find((x) => x.email === t.dataset.email);
+      if (m) memberForm(m);
+      break;
+    }
+    case "team-retry":
+      startTeam();
+      break;
+    case "pass-change":
+      passwordForm();
+      break;
+    case "my-name":
+      nameForm();
       break;
     case "login-open":
       openLogin("login");
@@ -4313,7 +5004,7 @@ $("#search").addEventListener("submit", async (e) => {
     failed = true;
   }
   const all = [...local, ...remote];
-  box.innerHTML = all.length ? all.map((r, i) => `<button type="button" data-i="${i}">${esc(r.label)}<small>${esc(r.sub)}</small></button>`).join("") : `<p>${failed ? "Hled\xE1n\xED te\u010F nen\xED dostupn\xE9 (Nominatim neodpov\xEDd\xE1)." : "Nic nenalezeno."}</p>`;
+  box.innerHTML = all.length ? all.map((r, i) => `<button type="button" data-i="${i}">${esc2(r.label)}<small>${esc2(r.sub)}</small></button>`).join("") : `<p>${failed ? "Hled\xE1n\xED te\u010F nen\xED dostupn\xE9 (Nominatim neodpov\xEDd\xE1)." : "Nic nenalezeno."}</p>`;
   box.onclick = (ev) => {
     const b = ev.target.closest("button");
     if (!b) return;
@@ -4477,15 +5168,15 @@ function csvVisits() {
   }
   return rows.join("\r\n");
 }
-var SYNC_LABEL = { local: volatile ? "Neukl\xE1d\xE1 se!" : "Jen v tomto za\u0159\xEDzen\xED", synced: "Synchronizov\xE1no", syncing: "Prob\xEDh\xE1 synchronizace", pending: "\u010Cek\xE1 na synchronizaci", offline: "Offline", error: "Chyba synchronizace", conflict: "Konflikt \u2013 vy\u0159e\u0161it", login: "Nep\u0159ihl\xE1\u0161en" };
-var SYNC_SHORT = { synced: "Ulo\u017Eeno", syncing: "Ukl\xE1d\xE1m", pending: "\u010Cek\xE1", offline: "Offline", error: "Chyba", conflict: "Konflikt" };
+var SYNC_LABEL = { local: volatile ? "Neukl\xE1d\xE1 se!" : "Jen v tomto za\u0159\xEDzen\xED", synced: "Synchronizov\xE1no", syncing: "Prob\xEDh\xE1 synchronizace", pending: "\u010Cek\xE1 na synchronizaci", offline: "Offline", error: "Chyba synchronizace", conflict: "Konflikt \u2013 vy\u0159e\u0161it", login: "Nep\u0159ihl\xE1\u0161en", outsider: "\u010Cek\xE1 na p\u0159id\xE1n\xED do t\xFDmu" };
+var SYNC_SHORT = { outsider: "Mimo t\xFDm", synced: "Ulo\u017Eeno", syncing: "Ukl\xE1d\xE1m", pending: "\u010Cek\xE1", offline: "Offline", error: "Chyba", conflict: "Konflikt" };
 function renderSync() {
-  const s = sb && !session ? "login" : store.state;
+  const s = sb && !session ? "login" : session && team.mode === "outsider" ? "outsider" : store.state;
   const el = $("#sync");
   el.dataset.s = s;
   el.title = SYNC_LABEL[s];
   el.querySelector("b").textContent = s === "login" ? "P\u0159ihl\xE1sit se" : SYNC_LABEL[s];
-  el.querySelector("small").textContent = s === "offline" ? "zm\u011Bny \u010Dekaj\xED v za\u0159\xEDzen\xED" : s === "error" ? "zkus\xEDm to znovu" : store.lastSync && session ? "naposledy " + fmtTime(store.lastSync.toISOString()) : s === "login" ? "evidence se nesd\xEDl\xED" : "";
+  el.querySelector("small").textContent = s === "outsider" ? "evidence se nesd\xEDl\xED" : s === "offline" ? "zm\u011Bny \u010Dekaj\xED v za\u0159\xEDzen\xED" : s === "error" ? "zkus\xEDm to znovu" : store.lastSync && session ? "naposledy " + fmtTime(store.lastSync.toISOString()) : s === "login" ? "evidence se nesd\xEDl\xED" : "";
   const av = $("#avatar");
   if (session && session.user && session.user.email) {
     av.textContent = initials();
@@ -4513,7 +5204,7 @@ $("#sync").addEventListener("click", () => {
   if (isDesk()) setSide(true);
   openSection("settings");
 });
-var LOGIN = { mode: "login", busy: false, apple: false, email: "", err: "" };
+var LOGIN = { mode: "login", busy: false, apple: false, signup: true, email: "", err: "" };
 var appUrl = () => location.origin + location.pathname;
 var loginOpen = () => !$("#login").hidden;
 var loginLater = () => {
@@ -4529,25 +5220,29 @@ function loginHtml() {
   const T = {
     login: ["P\u0159ihl\xE1\u0161en\xED", "P\u0159ihlas se ke sv\xE9mu \xFA\u010Dtu. Evidence roznosu se pak propisuje mezi iPhonem, iPadem a Macem.", "P\u0159ihl\xE1sit se"],
     reset: ["Zapomenut\xE9 heslo", "Zadej e-mail \xFA\u010Dtu. Po\u0161leme ti odkaz, p\u0159es kter\xFD si nastav\xED\u0161 nov\xE9 heslo.", "Poslat odkaz"],
-    sent: ["Zkontroluj e-mail", `Pokud \xFA\u010Det ${esc(LOGIN.email)} existuje, poslali jsme na n\u011Bj odkaz pro nastaven\xED nov\xE9ho hesla. Otev\u0159i ho na tomhle za\u0159\xEDzen\xED.`, "Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED"],
-    recovery: ["Nov\xE9 heslo", "Zvol si nov\xE9 heslo k \xFA\u010Dtu. Pak bude\u0161 rovnou p\u0159ihl\xE1\u0161en.", "Ulo\u017Eit heslo"]
+    sent: ["Zkontroluj e-mail", `Pokud \xFA\u010Det ${esc2(LOGIN.email)} existuje, poslali jsme na n\u011Bj odkaz pro nastaven\xED nov\xE9ho hesla. Otev\u0159i ho na tomhle za\u0159\xEDzen\xED.`, "Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED"],
+    recovery: ["Nov\xE9 heslo", "Zvol si nov\xE9 heslo k \xFA\u010Dtu. Pak bude\u0161 rovnou p\u0159ihl\xE1\u0161en.", "Ulo\u017Eit heslo"],
+    signup: ["Vytvo\u0159it \xFA\u010Det", "Zvol si vlastn\xED heslo.", "Vytvo\u0159it \xFA\u010Det"],
+    confirm: ["Potvr\u010F e-mail", `Na ${esc2(LOGIN.email)} jsme poslali odkaz. Otev\u0159i ho a pak se p\u0159ihlas sv\xFDm heslem.`, "Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED"]
   }[m];
   const logo2 = $("#logo").getAttribute("src");
-  const email = m === "login" || m === "reset";
-  const pass = m === "login" || m === "recovery";
+  const email = m === "login" || m === "reset" || m === "signup";
+  const pass = m === "login" || m === "recovery" || m === "signup";
+  const newPass = m === "recovery" || m === "signup";
   return `<div class="lg-card glass" role="dialog" aria-modal="true" aria-labelledby="lg-title">
     ${m !== "recovery" ? `<button type="button" class="lg-x" data-lg="later" aria-label="Zav\u0159\xEDt">${svg("x")}</button>` : ""}
     <div class="lg-head"><img class="lg-logo" src="${logo2}" alt="Rozvez.to"><h2 id="lg-title">${T[0]}</h2><p>${T[1]}</p></div>
     <form id="lg-form" novalidate>
       ${email || pass ? `<div class="lg-fields">
-        ${email ? `<label class="lg-f"><span>E-mail</span><input id="lg-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="jmeno@email.cz" value="${esc(LOGIN.email)}"></label>` : ""}
-        ${pass ? `<label class="lg-f pw"><span>${m === "recovery" ? "Nov\xE9 heslo" : "Heslo"}</span><input id="lg-pass" type="password" autocomplete="${m === "recovery" ? "new-password" : "current-password"}" placeholder="${m === "recovery" ? "Alespo\u0148 8 znak\u016F" : "Heslo"}"><button type="button" class="lg-eye" data-lg="eye" aria-label="Zobrazit heslo" aria-pressed="false">${svg("eye")}</button></label>` : ""}
+        ${email ? `<label class="lg-f"><span>E-mail</span><input id="lg-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="jmeno@email.cz" value="${esc2(LOGIN.email)}"></label>` : ""}
+        ${pass ? `<label class="lg-f pw"><span>${m === "recovery" ? "Nov\xE9 heslo" : m === "signup" ? "Vlastn\xED heslo" : "Heslo"}</span><input id="lg-pass" type="password" autocomplete="${newPass ? "new-password" : "current-password"}" placeholder="${newPass ? "Alespo\u0148 8 znak\u016F" : "Heslo"}"><button type="button" class="lg-eye" data-lg="eye" aria-label="Zobrazit heslo" aria-pressed="false">${svg("eye")}</button></label>` : ""}
       </div>` : ""}
-      <p class="lg-err" id="lg-err" role="alert" ${LOGIN.err ? "" : "hidden"}>${esc(LOGIN.err)}</p>
+      <p class="lg-err" id="lg-err" role="alert" ${LOGIN.err ? "" : "hidden"}>${esc2(LOGIN.err)}</p>
       <button class="lg-submit" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">${T[2]}</span></button>
     </form>
     ${m === "login" ? `<button type="button" class="lg-link" data-lg="reset">Zapomenut\xE9 heslo?</button>` : ""}
-    ${m === "reset" ? `<button type="button" class="lg-link" data-lg="back">Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED</button>` : ""}
+    ${m === "reset" || m === "signup" ? `<button type="button" class="lg-link" data-lg="back">${m === "signup" ? "U\u017E m\xE1m \xFA\u010Det \u2013 p\u0159ihl\xE1sit se" : "Zp\u011Bt na p\u0159ihl\xE1\u0161en\xED"}</button>` : ""}
+    ${m === "login" ? `<p class="lg-note">\xDA\u010Det ti zalo\u017E\xED spr\xE1vce t\xFDmu.</p>` : ""}
     ${m === "login" && LOGIN.apple ? `<div class="lg-or"><span>nebo</span></div><button type="button" class="lg-apple" data-lg="apple">Pokra\u010Dovat s Apple</button>` : ""}
     ${m !== "recovery" ? `<button type="button" class="lg-later" data-lg="later">Te\u010F ne \u2013 pracovat jen v tomto za\u0159\xEDzen\xED</button>` : ""}
   </div>`;
@@ -4609,6 +5304,9 @@ function lgBusy(on) {
 function authErr(err) {
   const m = String(err && (err.message || err.error_description) || err || ""), code = err && err.code, st = err && err.status;
   if (code === "invalid_credentials" || /Invalid login credentials/i.test(m)) return "Nespr\xE1vn\xFD e-mail nebo heslo.";
+  if (code === "user_already_exists" || code === "email_exists" || /already registered|already exists/i.test(m)) return "\xDA\u010Det s t\xEDmto e-mailem u\u017E existuje \u2013 p\u0159ihlas se, nebo si obnov heslo.";
+  if (code === "signup_disabled" || /signups? not allowed|signup is disabled/i.test(m)) return "Zakl\xE1d\xE1n\xED \xFA\u010Dt\u016F je v Supabase vypnut\xE9 \u2013 po\u017E\xE1dej spr\xE1vce.";
+  if (code === "over_email_send_rate_limit" || /email rate limit/i.test(m)) return "Server te\u010F nem\u016F\u017Ee poslat dal\u0161\xED e-mail (limit). Zkus to za hodinu nebo po\u017E\xE1dej spr\xE1vce.";
   if (code === "email_not_confirmed" || /Email not confirmed/i.test(m)) return "E-mail je\u0161t\u011B nen\xED potvrzen\xFD. Otev\u0159i odkaz z potvrzovac\xEDho e-mailu.";
   if (st === 429 || /rate limit|too many/i.test(m)) return "P\u0159\xEDli\u0161 mnoho pokus\u016F. Po\u010Dkej chv\xEDli a zkus to znovu.";
   if (code === "same_password" || /different from the old/i.test(m)) return "Nov\xE9 heslo mus\xED b\xFDt jin\xE9 ne\u017E p\u016Fvodn\xED.";
@@ -4621,7 +5319,7 @@ async function loginSubmit(e) {
   e.preventDefault();
   if (LOGIN.busy || !sb) return;
   const m = LOGIN.mode;
-  if (m === "sent") {
+  if (m === "sent" || m === "confirm") {
     LOGIN.mode = "login";
     LOGIN.err = "";
     renderLogin();
@@ -4639,7 +5337,7 @@ async function loginSubmit(e) {
     lgErr("Vypl\u0148 heslo.", pw);
     return;
   }
-  if (m === "recovery" && pw.value.length < 8) {
+  if ((m === "recovery" || m === "signup") && pw.value.length < 8) {
     lgErr("Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F.", pw);
     return;
   }
@@ -4652,6 +5350,7 @@ async function loginSubmit(e) {
     let r;
     if (m === "login") r = await sb.auth.signInWithPassword({ email, password: pw.value });
     else if (m === "reset") r = await sb.auth.resetPasswordForEmail(email, { redirectTo: appUrl() });
+    else if (m === "signup") r = await sb.auth.signUp({ email, password: pw.value, options: { emailRedirectTo: appUrl() } });
     else r = await sb.auth.updateUser({ password: pw.value });
     if (r && r.error) throw r.error;
     lgBusy(false);
@@ -4661,11 +5360,17 @@ async function loginSubmit(e) {
       renderLogin();
       return;
     }
+    if (m === "signup" && !(r.data && r.data.session)) {
+      LOGIN.mode = "confirm";
+      LOGIN.err = "";
+      renderLogin();
+      return;
+    }
     closeLogin();
-    toast(m === "login" ? "P\u0159ihl\xE1\u0161eno. Synchronizuji\u2026" : "Heslo zm\u011Bn\u011Bno. Jsi p\u0159ihl\xE1\u0161en.");
+    toast(m === "login" ? "P\u0159ihl\xE1\u0161eno. Synchronizuji\u2026" : m === "signup" ? "\xDA\u010Det je hotov\xFD. Jsi p\u0159ihl\xE1\u0161en." : "Heslo zm\u011Bn\u011Bno. Jsi p\u0159ihl\xE1\u0161en.");
   } catch (err) {
     lgBusy(false);
-    lgErr(authErr(err), m === "reset" ? em : pw);
+    lgErr(authErr(err), m === "reset" || /registered|existuje/i.test(authErr(err)) ? em : pw);
   }
 }
 $("#login").addEventListener("submit", (e) => {
@@ -4694,6 +5399,10 @@ $("#login").addEventListener("click", async (e) => {
     LOGIN.mode = "reset";
     LOGIN.err = "";
     renderLogin();
+  } else if (k === "signup") {
+    LOGIN.mode = "signup";
+    LOGIN.err = "";
+    renderLogin();
   } else if (k === "back") {
     LOGIN.mode = "login";
     LOGIN.err = "";
@@ -4708,20 +5417,24 @@ $("#login").addEventListener("click", async (e) => {
     }
   }
 });
-async function detectApple(c) {
+async function detectAuth(c) {
   try {
     const r = await fetch(c.url.replace(/\/+$/, "") + "/auth/v1/settings", { headers: { apikey: c.key } });
-    if (!r.ok) return false;
+    if (!r.ok) return { apple: false, signup: true };
     const j = await r.json();
-    return !!(j && j.external && j.external.apple === true);
+    return { apple: !!(j && j.external && j.external.apple === true), signup: !(j && j.disable_signup === true) };
   } catch (e) {
-    return false;
+    return { apple: false, signup: true };
   }
 }
 async function logout() {
   if (!sb) return;
   const out = async () => {
     closeModal();
+    try {
+      await team.stopShare();
+    } catch (e) {
+    }
     const { error } = await sb.auth.signOut();
     if (error && session) {
       toast(authErr(error) + " Odhl\xE1\u0161en\xED se nedokon\u010Dilo.");
@@ -4755,8 +5468,8 @@ async function logout() {
 function describe(table, row) {
   if (!row || row.deleted) return "smaz\xE1no";
   const s = STATUS[row.status] ? STATUS[row.status].label : "";
-  if (table === "entrances") return `${esc(row.label || "vchod")} \u2013 ${s}, ${row.flyers || 0} ks`;
-  return `${esc(row.name || row.address || "")} \u2013 ${s}${row.last_visit ? ", " + fmtDate(row.last_visit) : ""}${row.notes ? ", pozn.: " + esc(row.notes) : ""}`;
+  if (table === "entrances") return `${esc2(row.label || "vchod")} \u2013 ${s}, ${row.flyers || 0} ks`;
+  return `${esc2(row.name || row.address || "")} \u2013 ${s}${row.last_visit ? ", " + fmtDate(row.last_visit) : ""}${row.notes ? ", pozn.: " + esc2(row.notes) : ""}`;
 }
 function showConflict() {
   const c = store.conflicts[0];
@@ -4806,6 +5519,7 @@ store.on((ev) => {
     if (g && !B.has(ev.id)) addBuilding(fromStoreRow(g));
     else if (!g && B.has(ev.id) && B.get(ev.id).source === "manual") dropBuilding(ev.id);
   } else if (ev.table === "areas") drawArea(ev.id);
+  if (ev.live && ev.by && session && ev.by !== session.user.id && ["building_records", "entrances", "areas"].includes(ev.table)) mateMarked(ev);
   if (ev.remote) softRender();
 });
 async function initSupabase() {
@@ -4827,11 +5541,11 @@ async function initSupabase() {
   const apply = (s) => {
     const was = session && session.user.id;
     session = s;
-    if (s && was !== s.user.id) {
-      store.setRemote(new SupabaseRemote(sb));
-      store.sync();
+    if (s && was !== s.user.id) startTeam();
+    if (!s) {
+      team.stop();
+      store.setRemote(null);
     }
-    if (!s) store.setRemote(null);
     renderSync();
     if (["map", "settings"].includes(state.tab) && !state.sel) softRender();
   };
@@ -4845,8 +5559,9 @@ async function initSupabase() {
     console.warn(e);
     renderSync();
   }
-  detectApple(c).then((v) => {
-    LOGIN.apple = v;
+  detectAuth(c).then((v) => {
+    LOGIN.apple = v.apple;
+    LOGIN.signup = v.signup;
     if (loginOpen() && LOGIN.mode === "login" && !LOGIN.busy) renderLogin();
   });
   if (hashErr) openLogin(session ? "reset" : "login", hashErr);
@@ -4857,6 +5572,9 @@ window.addEventListener("offline", () => {
     store.offline = true;
     store.updateState();
   }
+});
+window.addEventListener("online", () => {
+  if (session && team.mode === "off") startTeam();
 });
 window.addEventListener("online", () => store.sync());
 document.addEventListener("visibilitychange", () => {
@@ -4916,7 +5634,7 @@ initSupabase();
 function fillMuni() {
   const sel = $("#muni-select"), cur = sel.value;
   const names = state.places.map((p) => p.name).filter((n) => n !== "Dob\u0159\xED\u0161");
-  sel.innerHTML = `<option value="">Dob\u0159\xED\u0161</option>` + names.map((n) => `<option>${esc(n)}</option>`).join("");
+  sel.innerHTML = `<option value="">Dob\u0159\xED\u0161</option>` + names.map((n) => `<option>${esc2(n)}</option>`).join("");
   sel.value = names.includes(cur) ? cur : "";
 }
 $("#muni-select").addEventListener("change", (e) => {
@@ -4956,7 +5674,7 @@ window.addEventListener("resize", () => {
     renderPanel();
   }
 });
-window.__rzt = { store, map, B, state, overpass, prefs, geo: () => ({ fix: GEO.fix, target: GEO.target, shown: GEO.shown, follow: GEO.follow, watch: GEO.watch, raf: GEO.raf, heading: GEO.heading }), openTab: (t) => {
+window.__rzt = { store, map, B, state, overpass, prefs, team, geo: () => ({ fix: GEO.fix, target: GEO.target, shown: GEO.shown, follow: GEO.follow, watch: GEO.watch, raf: GEO.raf, heading: GEO.heading }), openTab: (t) => {
   if (state.tab !== t) openSection(t);
 } };
 </script>
