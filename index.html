@@ -1329,6 +1329,12 @@ pre.invite { white-space: pre-wrap; font: inherit; font-size: 13.5px; line-heigh
 details.mf-pw { margin-top: 12px; padding: 10px 14px; border-radius: 14px; background: var(--soft); }
 details.mf-pw summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--accent); }
 details.mf-pw .btn { margin-top: 10px; }
+/* hláška nad mapou a tmavé tlačítko: pevně tmavé sklo s bílým textem v obou vzhledech
+   (dřív pozadí = barva textu → v tmavém vzhledu bílý text na bílém) */
+#notice:not(.err) { background: rgba(28,28,30,.86); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: #fff; }
+html[data-theme=dark] #notice:not(.err) { background: rgba(58,58,60,.92); border: 1px solid rgba(255,255,255,.1); }
+.btn.dark { background: #1C1C1E; border-color: #1C1C1E; color: #fff; }
+html[data-theme=dark] .btn.dark { background: #3A3A3C; border-color: #3A3A3C; }
 </style>
 </head>
 <body>
@@ -2853,7 +2859,7 @@ function fromStoreRow(g) {
   return { id: g.id, osm_type: g.osm_type, osm_id: g.osm_id, source: g.source, geometry: g.geometry, lat: g.lat, lon: g.lon, tags: g.osm_tags || {} };
 }
 var QPREF = "rzt-quick";
-var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true };
+var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true, focusMates: true };
 var prefs = (() => {
   try {
     return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
@@ -4034,7 +4040,7 @@ function accountGroup() {
 var gpsGroup = () => sgroup(
   "gps",
   "Sledov\xE1n\xED polohy",
-  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky") + (team.mode === "member" ? trow("users", "#5856D6", "shareLoc", "Sd\xEDlet polohu s t\xFDmem", "Kolegov\xE9 t\u011B uvid\xED na map\u011B, jen kdy\u017E m\xE1\u0161 zapnutou polohu") : ""),
+  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky") + (team.mode === "member" ? trow("users", "#5856D6", "shareLoc", "Sd\xEDlet polohu s t\xFDmem", "Kolegov\xE9 t\u011B uvid\xED na map\u011B, jen kdy\u017E m\xE1\u0161 zapnutou polohu") + trow("nav", "#AF52DE", "focusMates", "P\u0159i otev\u0159en\xED uk\xE1zat, kdo rozn\xE1\u0161\xED", "Mapa najede na kolegy, kte\u0159\xED pr\xE1v\u011B rozn\xE1\u0161\xED") : ""),
   "Poloha se m\u011B\u0159\xED jen p\u0159i otev\u0159en\xE9 aplikaci \u2013 na pozad\xED ji iPhone webu nedovol\xED. P\u0159i sledov\xE1n\xED displej nezhasne."
 );
 var mapGroup = () => sgroup(
@@ -4116,7 +4122,38 @@ async function startTeam() {
   renderSync();
   updateTeamChip();
   if (!state.sel) softRender();
+  if (mode === "member") focusMates("open");
 }
+var hiddenAt = 0;
+function focusMates(why) {
+  if (!prefs.focusMates || team.mode !== "member") return false;
+  if (GEO.follow || state.sel || state.mode !== "browse") return false;
+  const now = Date.now(), live = team.mates().filter((r) => now - Date.parse(r.updated_at) < LIVE_FRESH);
+  if (!live.length) return false;
+  const pts = live.map((r) => [r.lat, r.lon]);
+  const mobile = window.innerWidth <= 820;
+  if (mobile) setPanel(false);
+  if (pts.length === 1) map.setView(pts[0], Math.max(Math.min(map.getZoom(), 18), 17), { animate: why !== "open" && !reduceMotion() });
+  else map.fitBounds(L.latLngBounds(pts), { paddingTopLeft: [60, 110], paddingBottomRight: [mobile ? 90 : 130, mobile ? 190 : 90], maxZoom: 17, animate: why !== "open" && !reduceMotion() });
+  const names = live.map((r) => r.name || "Kolega");
+  toast(names.length === 1 ? `${names[0]} pr\xE1v\u011B rozn\xE1\u0161\xED \u2013 tady je.` : `Pr\xE1v\u011B rozn\xE1\u0161\xED: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` a dal\u0161\xED (${names.length - 3})` : ""}.`);
+  return true;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    hiddenAt = Date.now();
+    return;
+  }
+  if (team.mode !== "member" || !hiddenAt) return;
+  const away = Date.now() - hiddenAt;
+  hiddenAt = 0;
+  if (away < 3e4) return;
+  team.loadLive().then(() => {
+    updateTeamChip();
+    if (away > 5 * 6e4) focusMates("return");
+  }).catch(() => {
+  });
+});
 function showOutsider() {
   if (!$("#modal").hidden) return;
   modal(
