@@ -1335,6 +1335,11 @@ details.mf-pw .btn { margin-top: 10px; }
 html[data-theme=dark] #notice:not(.err) { background: rgba(58,58,60,.92); border: 1px solid rgba(255,255,255,.1); }
 .btn.dark { background: #1C1C1E; border-color: #1C1C1E; color: #fff; }
 html[data-theme=dark] .btn.dark { background: #3A3A3C; border-color: #3A3A3C; }
+#team-chip.idle { color: var(--muted); font-weight: 500; }
+#team-chip.idle .ico { opacity: .7; }
+.dlg h3 { margin: 16px 0 6px; }
+.mate-wrap.old .mate-dot { opacity: .75; }
+.mate-wrap.old .mate-n { opacity: .85; }
 </style>
 </head>
 <body>
@@ -2305,15 +2310,35 @@ var initialsOf = (name) => {
 };
 var esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var LIVE_FRESH = 60 * 1e3;
-var LIVE_MAX = 10 * 60 * 1e3;
+var LIVE_RECENT = 10 * 60 * 1e3;
 var SEND_EVERY = 4e3;
 var SEND_MIN_M = 8;
 var HEARTBEAT = 2e4;
-function agoText(ms) {
+var MAX_ACC = 250;
+var validCoord = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(Math.abs(lat) < 1e-6 && Math.abs(lon) < 1e-6);
+var tsOf = (r) => {
+  const t = Date.parse(r && r.updated_at);
+  return Number.isFinite(t) ? t : 0;
+};
+function agoText(ms, at) {
   const s = Math.max(0, Math.round(ms / 1e3));
   if (s < 10) return "pr\xE1v\u011B te\u010F";
   if (s < 60) return `p\u0159ed ${s} s`;
-  return `p\u0159ed ${Math.round(s / 60)} min`;
+  if (s < 3600) return `p\u0159ed ${Math.round(s / 60)} min`;
+  if (s < 6 * 3600) return `p\u0159ed ${Math.round(s / 3600)} h`;
+  const d = new Date(at || Date.now() - ms), now = /* @__PURE__ */ new Date();
+  const hm = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 864e5);
+  if (diff === 0) return `dnes ${hm}`;
+  if (diff === 1) return `v\u010Dera ${hm}`;
+  return `${d.getDate()}. ${d.getMonth() + 1}. ${hm}`;
+}
+function liveState(r, now = Date.now()) {
+  const age = now - tsOf(r);
+  if (r.active !== false && age < LIVE_FRESH) return "live";
+  if (r.active !== false && age < LIVE_RECENT) return "recent";
+  return "last";
 }
 var Team = class {
   constructor({ map: map2, L: L2, onChange, haversine: haversine2 }) {
@@ -2435,22 +2460,32 @@ var Team = class {
       });
     }).subscribe();
   }
+  // načte POSLEDNÍ ZNÁMOU polohu všech členů (i starou) – tabulka má jen jeden řádek na člověka
   async loadLive() {
-    const since = new Date(Date.now() - LIVE_MAX).toISOString();
-    const { data, error } = await this.sb.from("live_locations").select("*").gt("updated_at", since);
+    const { data, error } = await this.sb.from("live_locations").select("user_id,name,lat,lon,acc,heading,active,updated_at");
     if (error) throw error;
-    for (const r of data || []) this.upsertLive(r, true);
+    const seen = /* @__PURE__ */ new Set();
+    for (const r of data || []) {
+      seen.add(r.user_id);
+      this.upsertLive(r, true);
+    }
+    for (const id of [...this.live.keys()]) if (!seen.has(id)) this.drop(id);
   }
-  visible(r, now = Date.now()) {
-    return r.active !== false && r.user_id !== this.uid && now - Date.parse(r.updated_at) < LIVE_MAX && Number.isFinite(r.lat) && Number.isFinite(r.lon);
+  // ukázat lze každou platnou polohu kromě vlastní (tu ukazuje modrá tečka)
+  visible(r) {
+    return !!r && r.user_id !== this.uid && validCoord(Number(r.lat), Number(r.lon));
   }
   upsertLive(r, initial) {
-    if (r.user_id === this.uid) return;
+    if (!r || r.user_id === this.uid) return;
+    r = { ...r, lat: Number(r.lat), lon: Number(r.lon) };
     const cur = this.live.get(r.user_id);
+    if (cur && tsOf(r) < tsOf(cur.row)) return;
     if (!this.visible(r)) {
+      if (cur && !validCoord(r.lat, r.lon)) return;
       if (cur) this.drop(r.user_id);
       return;
     }
+    const wasLive = cur ? liveState(cur.row) === "live" : false;
     const L2 = this.L;
     if (!cur) {
       const c = colorFor(r.user_id);
@@ -2459,12 +2494,13 @@ var Team = class {
       this.live.set(r.user_id, item);
       this.label(item);
       marker.on("click", () => this.onChange("mate-click", r.user_id));
-      if (!initial) this.onChange("mate-join", r.user_id);
+      if (!initial && liveState(r) === "live") this.onChange("mate-join", r.user_id);
     } else {
       const from = cur.marker.getLatLng();
       cur.row = r;
       this.label(cur);
-      this.move(cur, from, L2.latLng(r.lat, r.lon));
+      if (from.lat !== r.lat || from.lng !== r.lon) this.move(cur, from, L2.latLng(r.lat, r.lon));
+      if (!initial && !wasLive && liveState(r) === "live") this.onChange("mate-join", r.user_id);
     }
     this.onChange("live");
   }
@@ -2486,11 +2522,13 @@ var Team = class {
   label(item) {
     const el = item.marker.getElement();
     if (!el) return;
-    const age = Date.now() - Date.parse(item.row.updated_at);
+    const now = Date.now(), age = now - tsOf(item.row), st = liveState(item.row, now);
     const n = el.querySelector(".mate-n");
-    const txt = (item.row.name || "Kolega") + (age > LIVE_FRESH ? " \xB7 " + agoText(age) : "");
+    const txt = (item.row.name || "Kolega") + (st === "live" ? "" : " \xB7 " + agoText(age, tsOf(item.row)));
     if (n.textContent !== txt) n.textContent = txt;
-    el.classList.toggle("stale", age > LIVE_FRESH);
+    el.classList.toggle("stale", st !== "live");
+    el.classList.toggle("old", st === "last");
+    item.marker.setZIndexOffset(st === "live" ? 900 : st === "recent" ? 600 : 300);
   }
   drop(id) {
     const it = this.live.get(id);
@@ -2501,11 +2539,8 @@ var Team = class {
     this.onChange("live");
   }
   refresh() {
-    const now = Date.now();
-    for (const [id, it] of this.live) {
-      if (!this.visible(it.row, now)) this.drop(id);
-      else this.label(it);
-    }
+    for (const it of this.live.values()) this.label(it);
+    this.onChange("live");
   }
   mates() {
     return [...this.live.values()].map((x) => x.row).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at));
@@ -2513,8 +2548,15 @@ var Team = class {
   // ---------- moje poloha pro tým ----------
   // volá se při každém bodu GPS; posílá jen občas (každé 4 s při pohybu, jinak alespoň jednou za 20 s)
   share(fix, heading) {
-    if (this.mode !== "member" || !this.sb) return;
+    if (this.mode !== "member" || !this.sb || !fix) return;
     this.sharing = true;
+    if (!validCoord(fix.lat, fix.lon)) return;
+    if (Number.isFinite(fix.acc) && fix.acc > MAX_ACC) {
+      this.shareNote = `\u010Cek\xE1m na p\u0159esn\u011Bj\u0161\xED polohu (te\u010F \xB1${Math.round(fix.acc)} m).`;
+      this.onChange("share");
+      return;
+    }
+    this.shareNote = null;
     const now = Date.now();
     const moved = !this.last || this.haversine(this.last.lat, this.last.lon, fix.lat, fix.lon) > SEND_MIN_M;
     if (this.sentAt && !(moved && now - this.sentAt >= SEND_EVERY) && now - this.sentAt < HEARTBEAT) return;
@@ -2522,6 +2564,7 @@ var Team = class {
     this.last = { lat: fix.lat, lon: fix.lon };
     this.send({ lat: fix.lat, lon: fix.lon, acc: Math.round(fix.acc), heading: heading == null ? null : Math.round(heading), active: true });
   }
+  // konec sledování: poslední poloha zůstane uložená jako „poslední známá“, jen už není aktuální
   async stopShare() {
     if (!this.sharing || this.mode !== "member" || !this.sb) {
       this.sharing = false;
@@ -2532,20 +2575,47 @@ var Team = class {
     this.last = null;
     await this.send({ active: false });
   }
-  async send(part) {
-    const row = { user_id: this.uid, name: this.me && this.me.name || "", ...part };
-    if (part.active === false) {
-      const { error: error2 } = await this.sb.from("live_locations").update({ active: false }).eq("user_id", this.uid);
-      if (error2) console.warn("[t\xFDm] poloha", error2);
-      return;
-    }
-    const { error } = await this.sb.from("live_locations").upsert(row, { onConflict: "user_id" });
-    if (error) console.warn("[t\xFDm] poloha", error);
+  // vypnuté sdílení v nastavení: moje poloha se z týmu úplně odstraní (nikdo ji neuvidí ani jako starou)
+  async hideMe() {
+    this.sharing = false;
+    this.sentAt = 0;
+    this.last = null;
+    if (this.mode !== "member" || !this.sb) return;
+    await this.queue(async () => {
+      const { error } = await this.sb.from("live_locations").delete().eq("user_id", this.uid);
+      if (error) console.warn("[t\xFDm] poloha", error);
+    });
+  }
+  // požadavky na polohu jdou jeden po druhém – starší odpověď nikdy nepřepíše novější stav
+  queue(fn) {
+    this.q = (this.q || Promise.resolve()).then(fn, fn).catch((e) => console.warn("[t\xFDm]", e));
+    return this.q;
+  }
+  send(part) {
+    return this.queue(async () => {
+      if (part.active === false) {
+        const { error: error2 } = await this.sb.from("live_locations").update({ active: false }).eq("user_id", this.uid);
+        if (error2) console.warn("[t\xFDm] poloha", error2);
+        return;
+      }
+      const row = { user_id: this.uid, name: this.me && this.me.name || "", ...part };
+      const { error } = await this.sb.from("live_locations").upsert(row, { onConflict: "user_id" });
+      if (error) {
+        console.warn("[t\xFDm] poloha", error);
+        this.shareError = error.message || String(error);
+        this.sentAt = 0;
+      } else {
+        this.shareError = null;
+        this.lastSentAt = Date.now();
+      }
+      this.onChange("share");
+    });
   }
 };
 function mateHtml(r, now, isMe) {
-  const age = now - Date.parse(r.updated_at);
-  return `<span class="mate-av" style="--c:${colorFor(r.user_id)}">${esc(initialsOf(r.name))}</span><span class="sr-t"><b>${esc(r.name || "Kolega")}${isMe ? " (ty)" : ""}</b><small>${age < LIVE_FRESH ? '<i class="live-dot"></i>Rozn\xE1\u0161\xED \xB7 ' : ""}${agoText(age)}</small></span>`;
+  const t = tsOf(r), age = now - t, st = liveState(r, now);
+  const what = st === "live" ? '<i class="live-dot"></i>Rozn\xE1\u0161\xED \xB7 ' : st === "recent" ? "P\u0159ed chv\xEDl\xED \xB7 " : r.active === false ? "Posledn\xED poloha (sledov\xE1n\xED vypnuto) \xB7 " : "Posledn\xED zn\xE1m\xE1 poloha \xB7 ";
+  return `<span class="mate-av" style="--c:${colorFor(r.user_id)}">${esc(initialsOf(r.name))}</span><span class="sr-t"><b>${esc(r.name || "Kolega")}${isMe ? " (ty)" : ""}</b><small>${what}${agoText(age, t)}</small></span>`;
 }
 
 // js/app.js
@@ -2859,7 +2929,7 @@ function fromStoreRow(g) {
   return { id: g.id, osm_type: g.osm_type, osm_id: g.osm_id, source: g.source, geometry: g.geometry, lat: g.lat, lon: g.lon, tags: g.osm_tags || {} };
 }
 var QPREF = "rzt-quick";
-var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true, focusMates: true };
+var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true, focusMates: true, autoLocate: true };
 var prefs = (() => {
   try {
     return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
@@ -3483,6 +3553,13 @@ function onFix(p) {
     const cont = moving || !!GEO.seg || GEO.segAt && now - GEO.segAt < 2500;
     GEO.segAt = now;
     GEO.seg = reduceMotion() ? null : { from, to: GEO.target, t0: now, dur: cont ? Math.min(1500, Math.max(300, dtFix * 1.05)) : 600, lin: !!cont };
+    if (GEO.seg) {
+      try {
+        GEO.seg.pxs = map.project([from.lat, from.lon]).distanceTo(map.project([GEO.target.lat, GEO.target.lon])) / (GEO.seg.dur / 1e3);
+      } catch (e) {
+        GEO.seg.pxs = null;
+      }
+    }
     if (!GEO.seg) GEO.shown = { ...GEO.target };
   }
   if (fix.acc > 120 && !GEO.weakShown) {
@@ -3492,6 +3569,7 @@ function onFix(p) {
   if (fix.acc < 50) GEO.weakShown = false;
   if (GEO.first) {
     GEO.first = false;
+    GEO.auto = false;
     GEO.shown = { ...GEO.target };
     meMarker([GEO.shown.lat, GEO.shown.lon]);
     if (GEO.follow) {
@@ -3534,6 +3612,14 @@ var lastHeadingCss = "";
 function frame(now) {
   GEO.raf = 0;
   if (GEO.watch == null || !GEO.target) return;
+  if (GEO.seg && GEO.seg.pxs != null && !GEO.zooming) {
+    const minDt = 1e3 / Math.min(60, Math.max(12, GEO.seg.pxs * 2.5));
+    if (now - (GEO.drawnAt || 0) < minDt - 2) {
+      GEO.raf = requestAnimationFrame(frame);
+      return;
+    }
+  }
+  GEO.drawnAt = now;
   let busy = false;
   if (GEO.seg) {
     const k = Math.min(1, (now - GEO.seg.t0) / GEO.seg.dur), e = GEO.seg.lin ? k : 1 - (1 - k) * (1 - k);
@@ -3606,6 +3692,11 @@ function geoStart() {
       return;
     }
     geoStop();
+    if (GEO.auto) {
+      GEO.auto = false;
+      toast(err.code === 1 ? "Poloha je zak\xE1zan\xE1 \u2013 klepni na \u201EMoje poloha\u201C pro n\xE1vod." : "Polohu se te\u010F nepoda\u0159ilo zjistit \u2013 zkus \u201EMoje poloha\u201C.");
+      return;
+    }
     geoHelp(err.code);
   }, geoOptions());
 }
@@ -3641,6 +3732,19 @@ function resumeFollow() {
   ensureLoop();
 }
 $("#follow-resume").addEventListener("click", resumeFollow);
+var autoLocated = false;
+async function autoLocate() {
+  if (autoLocated || !prefs.autoLocate || GEO.watch != null || !("geolocation" in navigator) || !window.isSecureContext) return;
+  autoLocated = true;
+  try {
+    const st = navigator.permissions && await navigator.permissions.query({ name: "geolocation" });
+    if (st && st.state === "denied") return;
+  } catch (e) {
+  }
+  if (GEO.watch != null) return;
+  GEO.auto = true;
+  locate();
+}
 function locate() {
   if (GEO.watch != null && !GEO.follow) {
     resumeFollow();
@@ -3985,7 +4089,7 @@ function sbConfig() {
   }
   return null;
 }
-var APP_VERSION = "2.0 \xB7 \u0159\xEDjen 2026";
+var APP_VERSION = "1.0 \xB7 24. 10. 2026";
 var tileI = (ico, c) => `<span class="tile" style="--c:${c}">${svg(ico)}</span>`;
 var tgl = (k, label) => `<button type="button" class="toggle ${prefs[k] ? "on" : ""}" data-act="pref" data-k="${k}" role="switch" aria-checked="${!!prefs[k]}" aria-label="${label}"><i></i></button>`;
 var srow = (ico, c, title, sub, right = "") => `<div class="sr">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${right}</div>`;
@@ -4040,7 +4144,7 @@ function accountGroup() {
 var gpsGroup = () => sgroup(
   "gps",
   "Sledov\xE1n\xED polohy",
-  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky") + (team.mode === "member" ? trow("users", "#5856D6", "shareLoc", "Sd\xEDlet polohu s t\xFDmem", "Kolegov\xE9 t\u011B uvid\xED na map\u011B, jen kdy\u017E m\xE1\u0161 zapnutou polohu") + trow("nav", "#AF52DE", "focusMates", "P\u0159i otev\u0159en\xED uk\xE1zat, kdo rozn\xE1\u0161\xED", "Mapa najede na kolegy, kte\u0159\xED pr\xE1v\u011B rozn\xE1\u0161\xED") : ""),
+  segrow("nav", "#007AFF", "gpsMode", "P\u0159esnost", [["precise", "P\u0159esn\xE1"], ["eco", "\xDAsporn\xE1"]], prefs.gpsMode === "eco" ? "\u0160et\u0159\xED baterii" : "Pro ch\u016Fzi") + trow("locate", "#FF3B30", "autoLocate", "Zapnout polohu po otev\u0159en\xED", "Po p\u0159ihl\xE1\u0161en\xED a p\u0159i ka\u017Ed\xE9m spu\u0161t\u011Bn\xED") + trow("locate", "#34C759", "autoFollow", "Mapa jede se mnou", "Po zapnut\xED polohy") + trow("target", "#5AC8FA", "accCircle", "Kruh p\u0159esnosti", "Nejistota m\u011B\u0159en\xED") + trow("compass", "#FF9500", "heading", "Sm\u011Br pohybu", "Ku\u017Eel u te\u010Dky") + (team.mode === "member" ? trow("users", "#5856D6", "shareLoc", "Sd\xEDlet polohu s t\xFDmem", "Kolegov\xE9 t\u011B uvid\xED na map\u011B, jen kdy\u017E m\xE1\u0161 zapnutou polohu") + trow("nav", "#AF52DE", "focusMates", "P\u0159i otev\u0159en\xED uk\xE1zat, kdo rozn\xE1\u0161\xED", "Mapa najede na kolegy, kte\u0159\xED pr\xE1v\u011B rozn\xE1\u0161\xED") : ""),
   "Poloha se m\u011B\u0159\xED jen p\u0159i otev\u0159en\xE9 aplikaci \u2013 na pozad\xED ji iPhone webu nedovol\xED. P\u0159i sledov\xE1n\xED displej nezhasne."
 );
 var mapGroup = () => sgroup(
@@ -4089,7 +4193,7 @@ function teamGroup() {
   const now = Date.now(), live = new Map(team.mates().map((r) => [r.user_id, r]));
   const rows = team.members.map((m) => {
     const lv = m.user_id && live.get(m.user_id), me = m.user_id === session.user.id;
-    const sub = !m.active ? "Vypnut\xFD p\u0159\xEDstup" : lv && now - Date.parse(lv.updated_at) < LIVE_FRESH ? '<i class="live-dot"></i>Rozn\xE1\u0161\xED te\u010F' : me ? "To jsi ty" : esc2(m.email);
+    const sub = !m.active ? "Vypnut\xFD p\u0159\xEDstup" : lv && liveState(lv, now) === "live" ? '<i class="live-dot"></i>Rozn\xE1\u0161\xED te\u010F' : me ? "To jsi ty" : lv ? `Posledn\xED poloha ${agoText(now - Date.parse(lv.updated_at), Date.parse(lv.updated_at))}` : esc2(m.email);
     const inner = `<span class="mate-av" style="--c:${colorFor(m.user_id || m.email)}">${esc2(initialsOf(m.name))}</span><span class="sr-t"><b>${esc2(m.name)}${m.role === "admin" ? ' <em class="badge-s">Spr\xE1vce</em>' : ""}</b><small>${sub}</small></span>`;
     return team.isAdmin ? `<button type="button" class="sr link mem" data-act="mem-open" data-email="${esc2(m.email)}">${inner}${svg("chev", "ico sr-chev")}</button>` : `<div class="sr mem">${inner}</div>`;
   }).join("");
@@ -4100,9 +4204,18 @@ function teamGroup() {
     team.isAdmin ? "P\u0159id\xE1n\xEDm rovnou vznikne \xFA\u010Det s heslem \u2013 nic se nepos\xEDl\xE1 ani nepotvrzuje." : "\u010Cleny p\u0159id\xE1v\xE1 spr\xE1vce t\xFDmu."
   );
 }
+var teamStarting = false;
 async function startTeam() {
   const s = session;
-  if (!s || !sb) return;
+  if (!s || !sb || teamStarting) return;
+  teamStarting = true;
+  try {
+    await startTeamInner(s);
+  } finally {
+    teamStarting = false;
+  }
+}
+async function startTeamInner(s) {
   if (!store.remote) {
     store.setRemote(new SupabaseRemote(sb));
     store.sync();
@@ -4127,9 +4240,13 @@ async function startTeam() {
 var hiddenAt = 0;
 function focusMates(why) {
   if (!prefs.focusMates || team.mode !== "member") return false;
-  if (GEO.follow || state.sel || state.mode !== "browse") return false;
-  const now = Date.now(), live = team.mates().filter((r) => now - Date.parse(r.updated_at) < LIVE_FRESH);
+  const now = Date.now(), live = team.mates().filter((r) => liveState(r, now) === "live");
   if (!live.length) return false;
+  const names0 = live.map((r) => r.name || "Kolega");
+  if (GEO.follow || GEO.watch != null || state.sel || state.mode !== "browse") {
+    toast(names0.length === 1 ? `${names0[0]} pr\xE1v\u011B rozn\xE1\u0161\xED \u2013 klepni na \u0161t\xEDtek t\xFDmu.` : `Pr\xE1v\u011B rozn\xE1\u0161\xED: ${names0.slice(0, 3).join(", ")} \u2013 klepni na \u0161t\xEDtek t\xFDmu.`);
+    return false;
+  }
   const pts = live.map((r) => [r.lat, r.lon]);
   const mobile = window.innerWidth <= 820;
   if (mobile) setPanel(false);
@@ -4142,6 +4259,11 @@ function focusMates(why) {
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     hiddenAt = Date.now();
+    return;
+  }
+  if (session && sb && team.mode === "off") {
+    hiddenAt = 0;
+    startTeam();
     return;
   }
   if (team.mode !== "member" || !hiddenAt) return;
@@ -4173,7 +4295,10 @@ function onTeam(what, id) {
   if (what === "mate-join") toast(`${team.nameOf(id) || "Kolega"} pr\xE1v\u011B rozn\xE1\u0161\xED \u2013 vid\xED\u0161 ho na map\u011B.`);
   if (what === "mate-click") {
     const r = team.mates().find((x) => x.user_id === id);
-    if (r) toast(`${r.name || "Kolega"} \xB7 ${agoText(Date.now() - Date.parse(r.updated_at))}`);
+    if (r) {
+      const t = Date.parse(r.updated_at), st = liveState(r);
+      toast(`${r.name || "Kolega"} \xB7 ${st === "live" ? "rozn\xE1\u0161\xED te\u010F" : "posledn\xED zn\xE1m\xE1 poloha " + agoText(Date.now() - t, t)}`);
+    }
   }
   if ((what === "members" || what === "live" || what === "mode") && !state.sel && (state.tab === "settings" || !isDesk())) softRender();
   if (what === "mode") renderSync();
@@ -4181,20 +4306,28 @@ function onTeam(what, id) {
 function updateTeamChip() {
   const el = $("#team-chip");
   if (!el) return;
-  const now = Date.now(), m = team.mates(), on = m.filter((r) => now - Date.parse(r.updated_at) < LIVE_FRESH).length;
-  el.hidden = team.mode !== "member" || !m.length;
+  const now = Date.now(), on = team.mates().filter((r) => liveState(r, now) === "live").length;
+  el.hidden = team.mode !== "member";
   if (el.hidden) return;
-  el.querySelector("span").textContent = on ? `${on} rozn\xE1\u0161\xED` : `${m.length} ned\xE1vno`;
+  el.querySelector("span").textContent = on ? `${on} rozn\xE1\u0161\xED` : "Nikdo nerozn\xE1\u0161\xED";
   el.classList.toggle("on", on > 0);
+  el.classList.toggle("idle", !on);
 }
-function showMates() {
-  const now = Date.now(), m = team.mates();
-  if (!m.length) {
-    toast("Te\u010F nikdo z t\xFDmu nesd\xEDl\xED polohu.");
-    return;
+async function showMates() {
+  try {
+    await team.loadLive();
+  } catch (e) {
   }
-  modal(`<h2>Kdo rozn\xE1\u0161\xED</h2><div class="sg mates">${m.map((r) => `<button type="button" class="sr link" data-m="go" data-uid="${esc2(r.user_id)}">${mateHtml(r, now)}${svg("chev", "ico sr-chev")}</button>`).join("")}</div>
-    <p class="hint">Poloha se ukazuje jen \u010Dlen\u016Fm t\xFDmu a jen kdy\u017E m\xE1 kolega zapnutou polohu.</p><div class="btns"><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`, {});
+  const now = Date.now(), all = team.mates(), m = all.filter((r) => liveState(r, now) === "live"), old = all.filter((r) => liveState(r, now) !== "live");
+  const me = session && session.user.id;
+  const myState = !prefs.shareLoc ? "Sd\xEDlen\xED polohy m\xE1\u0161 vypnut\xE9 (Nastaven\xED \u2192 Sledov\xE1n\xED polohy)." : GEO.watch == null ? "Tvoji polohu kolegov\xE9 nevid\xED \u2013 zapni \u201EMoje poloha\u201C." : team.shareError ? "Polohu se nepoda\u0159ilo odeslat: " + team.shareError : team.shareNote ? team.shareNote : team.lastSentAt ? `Tvoje poloha se sd\xEDl\xED (naposledy ${agoText(now - team.lastSentAt)}).` : "Tvoje poloha se za\u010D\xEDn\xE1 sd\xEDlet\u2026";
+  const goRow = (r) => `<button type="button" class="sr link" data-m="go" data-uid="${esc2(r.user_id)}">${mateHtml(r, now)}${svg("chev", "ico sr-chev")}</button>`;
+  const none = team.members.filter((x) => x.active && x.user_id !== me && !all.some((r) => r.user_id === x.user_id));
+  const noneRows = none.map((x) => `<div class="sr"><span class="mate-av" style="--c:${colorFor(x.user_id || x.email)}">${esc2(initialsOf(x.name))}</span><span class="sr-t"><b>${esc2(x.name)}</b><small>Zat\xEDm \u017E\xE1dn\xE1 poloha</small></span></div>`).join("");
+  modal(`<h2>Kdo rozn\xE1\u0161\xED</h2>${m.length ? `<div class="sg mates">${m.map(goRow).join("")}</div>` : "<p>Te\u010F nikdo z t\xFDmu nerozn\xE1\u0161\xED.</p>"}
+    ${old.length ? `<h3>Posledn\xED zn\xE1m\xE1 poloha</h3><div class="sg mates">${old.map(goRow).join("")}</div>` : ""}
+    ${noneRows ? `<h3>Bez polohy</h3><div class="sg mates">${noneRows}</div>` : ""}
+    <p class="hint">${esc2(myState)}</p><p class="hint">Kolegu uvid\xED\u0161, jen kdy\u017E m\xE1 otev\u0159enou aplikaci a zapnut\xE9 \u201EMoje poloha\u201C. Verze aplikace ${APP_VERSION} \u2013 na v\u0161ech telefonech by m\u011Bla b\xFDt stejn\xE1.</p><div class="btns"><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`, {});
   $("#modal").onclick = (e) => {
     const b = e.target.closest("[data-m]");
     if (!b) return;
@@ -4486,7 +4619,7 @@ function applyPref(k) {
   else if (k === "areas") {
     for (const a of store.all("areas")) drawArea(a.id);
   } else if (k === "shareLoc") {
-    if (!prefs.shareLoc) team.stopShare().catch(() => {
+    if (!prefs.shareLoc) team.hideMe().catch(() => {
     });
     else if (GEO.fix) {
       team.sentAt = 0;
@@ -4510,7 +4643,11 @@ var importCard = () => card("Import dat", "upload", `<div class="grid2">
 var mapDataCard = () => card("Mapov\xE1 data", "map", `<p class="meta" style="margin-bottom:4px">Na\u010Dteno budov: <b>${num(B.size)}</b></p>
   <p class="hint" style="margin:0 0 12px">Obrysy se dr\u017E\xED v za\u0159\xEDzen\xED ${CFG.cacheDays} dn\xED, aby se zbyte\u010Dn\u011B nezat\u011B\u017Eovalo Overpass API.</p>
   <button class="tbtn wide" data-act="cache-clear">${svg("refresh")}St\xE1hnout mapov\xE1 data znovu</button>`);
-var isDesk = () => window.innerWidth > 820;
+var winW = window.innerWidth;
+window.addEventListener("resize", () => {
+  winW = window.innerWidth;
+});
+var isDesk = () => winW > 820;
 var SECTIONS = [
   [{ t: "stats", label: "P\u0159ehled", ico: "dashboard", c: "#007AFF" }, { t: "charts", label: "Statistiky", ico: "chart", c: "#5856D6" }],
   [{ t: "map", label: "Mapa", ico: "map", c: "#34C759" }, { t: "list", label: "Z\xE1znamy", ico: "list", c: "#FF9500" }],
@@ -5578,7 +5715,10 @@ async function initSupabase() {
   const apply = (s) => {
     const was = session && session.user.id;
     session = s;
-    if (s && was !== s.user.id) startTeam();
+    if (s && was !== s.user.id) {
+      startTeam();
+      autoLocate();
+    }
     if (!s) {
       team.stop();
       store.setRemote(null);
@@ -5613,6 +5753,15 @@ window.addEventListener("offline", () => {
 window.addEventListener("online", () => {
   if (session && team.mode === "off") startTeam();
 });
+setInterval(() => {
+  if (document.hidden) return;
+  if (session && sb && team.mode === "off") startTeam();
+  if (team.sharing && GEO.watch != null && GEO.fix && prefs.shareLoc !== false) team.share(GEO.fix, GEO.heading);
+  if (team.mode === "member" && ++liveTick % 6 === 0) team.loadLive().catch(() => {
+  });
+  updateTeamChip();
+}, 1e4);
+var liveTick = 0;
 window.addEventListener("online", () => store.sync());
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) store.sync();
