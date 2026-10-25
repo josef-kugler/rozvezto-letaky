@@ -1943,14 +1943,16 @@ function center(geom) {
   if (geom.type === "Point") return { lon: geom.coordinates[0], lat: geom.coordinates[1] };
   const ring = geom.type === "Polygon" ? geom.coordinates[0] : geom.type === "MultiPolygon" ? geom.coordinates[0][0] : null;
   if (ring && ring.length > 3) {
+    const x0 = ring[0][0], y0 = ring[0][1];
     let a = 0, cx = 0, cy = 0;
     for (let i = 0; i < ring.length - 1; i++) {
-      const f = ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+      const xi = ring[i][0] - x0, yi = ring[i][1] - y0, xj = ring[i + 1][0] - x0, yj = ring[i + 1][1] - y0;
+      const f = xi * yj - xj * yi;
       a += f;
-      cx += (ring[i][0] + ring[i + 1][0]) * f;
-      cy += (ring[i][1] + ring[i + 1][1]) * f;
+      cx += (xi + xj) * f;
+      cy += (yi + yj) * f;
     }
-    if (Math.abs(a) > 1e-14) return { lon: cx / (3 * a), lat: cy / (3 * a) };
+    if (Math.abs(a) > 1e-18) return { lon: x0 + cx / (3 * a), lat: y0 + cy / (3 * a) };
   }
   const b = bbox(geom);
   return { lon: (b.w + b.e) / 2, lat: (b.s + b.n) / 2 };
@@ -2019,6 +2021,57 @@ function lineGeometry(el) {
   if (el.type !== "way" || !Array.isArray(el.geometry)) return null;
   const c = el.geometry.filter(good).map(pt);
   return c.length > 1 ? { type: "LineString", coordinates: c } : null;
+}
+function areaM2(geom) {
+  if (!geom) return 0;
+  const polys = geom.type === "Polygon" ? [geom.coordinates] : geom.type === "MultiPolygon" ? geom.coordinates : [];
+  let sum = 0;
+  for (const poly of polys) {
+    const ring = poly[0];
+    if (!ring || ring.length < 4) continue;
+    const lat0 = ring[0][1] * Math.PI / 180, kx = 111320 * Math.cos(lat0), ky = 110540;
+    let a = 0;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) a += ring[j][0] * kx * (ring[i][1] * ky) - ring[i][0] * kx * (ring[j][1] * ky);
+    sum += Math.abs(a) / 2;
+  }
+  return sum;
+}
+var AUX_TAGS = /* @__PURE__ */ new Set(["garage", "garages", "carport", "shed", "hut", "roof", "greenhouse", "barn", "farm_auxiliary", "service", "toilets", "storage_tank", "tank", "kiosk", "container", "transformer_tower", "bunker", "silo", "stable", "cowshed", "sty", "boathouse", "gazebo", "pavilion", "shelter", "ruins", "bicycle_parking", "parking", "water_tower"]);
+var UNSPECIFIED = /* @__PURE__ */ new Set(["yes", "outbuilding", "auxiliary", "detached_garage", ""]);
+function classifyAux(list, context = []) {
+  const all = [...context, ...list];
+  for (const b of all) if (b._area == null) b._area = areaM2(b.geometry);
+  const grid = /* @__PURE__ */ new Map(), key = (la, lo) => Math.floor(la / 6e-4) + ":" + Math.floor(lo / 6e-4);
+  for (const b of all) {
+    const k = key(b.lat, b.lon);
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(b);
+  }
+  const near = (b, maxM) => {
+    const out = [], i0 = Math.floor(b.lat / 6e-4), j0 = Math.floor(b.lon / 6e-4);
+    for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) for (const o of grid.get(i + ":" + j) || []) {
+      if (o === b) continue;
+      const dy = (o.lat - b.lat) * 110540, dx = (o.lon - b.lon) * 111320 * Math.cos(b.lat * Math.PI / 180), d = Math.hypot(dx, dy);
+      if (d <= maxM) out.push({ o, d });
+    }
+    return out.sort((a, c) => a.d - c.d);
+  };
+  const isHouse = (o) => o.hasAddr || !AUX_TAGS.has(String(o.tags && o.tags.building || "yes")) && o._area >= 60;
+  const res = /* @__PURE__ */ new Map();
+  for (const b of list) {
+    const t = String(b.tags && b.tags.building || "yes");
+    if (b.hasAddr || b.geometry && b.geometry.type === "Point") continue;
+    let aux = false;
+    if (AUX_TAGS.has(t)) aux = true;
+    else if (UNSPECIFIED.has(t) || t === "yes") {
+      if (b._area < 25) aux = true;
+      else if (b._area <= 120) aux = near(b, 35).some(({ o }) => o.hasAddr && o._area >= b._area * 1.5);
+    }
+    if (!aux) continue;
+    const owner = near(b, 60).find(({ o }) => isHouse(o) && !res.has(o.id));
+    res.set(b.id, owner ? owner.o.id : null);
+  }
+  return res;
 }
 
 // js/overpass.js
@@ -2695,6 +2748,8 @@ var addrSeen = /* @__PURE__ */ new Set();
 var streets = /* @__PURE__ */ new Map();
 var areaLayers = /* @__PURE__ */ new Map();
 var ingested = /* @__PURE__ */ new Set();
+var AUX = /* @__PURE__ */ new Map();
+var AUX_OF = /* @__PURE__ */ new Map();
 var sb = null;
 var session = null;
 var map = L.map("map", { center: CFG.center, zoom: CFG.homeZoom, minZoom: 9, maxZoom: 20, zoomSnap: 0.5, zoomControl: false, tap: false });
@@ -2838,7 +2893,7 @@ function deriveFromEntrances(id) {
   if (r.status !== st) store.put("building_records", { id, status: st, last_visit: st === "none" ? r.last_visit : today() });
 }
 function bStyle(id) {
-  const b = B.get(id), r = rec(id), st = r && r.status || "none";
+  const b = B.get(id), r = rec(id) || (b && b.aux && b.owner ? rec(b.owner) : null), st = r && r.status || "none";
   const selected = state.sel && state.sel.id === id || state.multi.has(id);
   const ok = passes(st, r && r.municipality || b && b.muni || "", r && r.last_visit);
   const far = map.getZoom() < MIN_ZOOM_BUILDINGS && st !== "none";
@@ -2854,6 +2909,11 @@ function restyle(id) {
   const b = B.get(id);
   if (b && b.layer) b.layer.setStyle(bStyle(id));
   if (b && b.icon) iconFor(b);
+  const ax = AUX_OF.get(id);
+  if (ax) for (const a of ax) {
+    const ab = B.get(a);
+    if (ab && ab.layer && !rec(a)) ab.layer.setStyle(bStyle(a));
+  }
 }
 var ICON_ZOOM = 18;
 var MAX_ICONS = 450;
@@ -2878,7 +2938,7 @@ function updateIcons() {
     const show = prefs.icons && map.getZoom() >= ICON_ZOOM, vb = map.getBounds().pad(0.15);
     let n = 0;
     for (const b of B.values()) {
-      const want = show && n < MAX_ICONS && b.geometry.type !== "Point" && vb.contains([b.lat, b.lon]);
+      const want = show && n < MAX_ICONS && !b.aux && b.geometry.type !== "Point" && vb.contains([b.lat, b.lon]);
       if (want) {
         n++;
         if (!b.icon) {
@@ -2898,10 +2958,12 @@ function restyleAll() {
 }
 function addBuilding(b) {
   if (!b || !b.id || !validGeom(b.geometry) || b.geometry.type.includes("Line")) return;
-  if (!Number.isFinite(b.lat) || !Number.isFinite(b.lon)) {
+  if (b.geometry.type !== "Point" || !Number.isFinite(b.lat) || !Number.isFinite(b.lon)) {
     const c = center(b.geometry);
-    b.lat = c.lat;
-    b.lon = c.lon;
+    if (c && Number.isFinite(c.lat)) {
+      b.lat = c.lat;
+      b.lon = c.lon;
+    }
   }
   if (B.has(b.id)) {
     const old = B.get(b.id);
@@ -2929,7 +2991,7 @@ function fromStoreRow(g) {
   return { id: g.id, osm_type: g.osm_type, osm_id: g.osm_id, source: g.source, geometry: g.geometry, lat: g.lat, lon: g.lon, tags: g.osm_tags || {} };
 }
 var QPREF = "rzt-quick";
-var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true, focusMates: true, autoLocate: true };
+var PREF_DEFAULTS = { quick: true, flyers: 1, gpsMode: "precise", autoFollow: true, accCircle: true, heading: true, anim: true, theme: "system", density: "normal", icons: true, areas: true, basemap: "osm", haptics: true, lastView: true, shareLoc: true, focusMates: true, autoLocate: true, hideAux: true };
 var prefs = (() => {
   try {
     return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(QPREF) || "{}") };
@@ -3170,7 +3232,39 @@ function ingest(key, data) {
     if (!addrGrid.has(c)) addrGrid.set(c, []);
     addrGrid.get(c).push(a);
   }
-  for (const b of data.buildings) addBuilding({ ...b, source: "osm" });
+  const fresh = data.buildings.filter((b) => !B.has(b.id) && !AUX.has(b.id) && validGeom(b.geometry)).map((b) => {
+    const c = b.geometry.type === "Point" ? null : center(b.geometry);
+    return { ...b, ...c ? { lat: c.lat, lon: c.lon } : {}, source: "osm", hasAddr: addressesIn(b).length > 0 };
+  });
+  let auxMap = /* @__PURE__ */ new Map();
+  try {
+    const ctx = [];
+    if (fresh.length) {
+      const bb = fresh.reduce((a, b) => ({ s: Math.min(a.s, b.lat), n: Math.max(a.n, b.lat), w: Math.min(a.w, b.lon), e: Math.max(a.e, b.lon) }), { s: 90, n: -90, w: 180, e: -180 });
+      for (const o of B.values()) if (o.lat > bb.s - 1e-3 && o.lat < bb.n + 1e-3 && o.lon > bb.w - 15e-4 && o.lon < bb.e + 15e-4) {
+        if (o.hasAddr == null) o.hasAddr = addressesIn(o).length > 0 || !!(rec(o.id) || {}).address;
+        ctx.push(o);
+      }
+    }
+    auxMap = classifyAux(fresh, ctx);
+  } catch (e) {
+    console.warn("[p\u0159\xEDstavky]", e);
+  }
+  for (const b of fresh) {
+    if (auxMap.has(b.id) && !rec(b.id)) {
+      b.aux = true;
+      b.owner = auxMap.get(b.id);
+      if (b.owner) {
+        if (!AUX_OF.has(b.owner)) AUX_OF.set(b.owner, /* @__PURE__ */ new Set());
+        AUX_OF.get(b.owner).add(b.id);
+      }
+      if (prefs.hideAux) {
+        AUX.set(b.id, b);
+        continue;
+      }
+    }
+    addBuilding(b);
+  }
   for (const s of data.streets) if (!streets.has(s.id)) streets.set(s.id, { ...s, layer: null });
   if (state.mode === "street") {
     showStreetLayers(true);
@@ -3184,6 +3278,7 @@ function evict() {
     if (rec(id) || state.multi.has(id) || state.sel && state.sel.id === id || vb.contains([b.lat, b.lon])) continue;
     dropBuilding(id);
   }
+  for (const [id, a] of AUX) if (!vb.contains([a.lat, a.lon])) AUX.delete(id);
   ingested.clear();
 }
 async function loadView() {
@@ -3993,7 +4088,7 @@ function viewInner() {
   return all ? `<div class="vc"><b>${num(done)}</b><span>z ${num(all)} budov hotovo \xB7 zb\xFDv\xE1 ${num(all - done)}</span></div>
     <div class="bar" role="progressbar" aria-label="Hotovo ve v\xFD\u0159ezu" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>` : '<p class="hint" style="margin:0">V tomto v\xFD\u0159ezu nejsou na\u010Dten\xE9 \u017E\xE1dn\xE9 budovy.</p>';
 }
-var viewCard = () => card("V tomto v\xFD\u0159ezu mapy", "", `<div id="vcard">${viewInner()}</div>`);
+var viewCard = () => card("V tomto v\xFD\u0159ezu mapy", "", `<div id="vcard">${viewInner()}</div>${prefs.hideAux && AUX.size ? `<p class="hint">Gar\xE1\u017Ee a p\u0159\xEDstavky (${num(AUX.size)}) jsou skryt\xE9 a nepo\u010D\xEDtaj\xED se.</p>` : ""}`);
 var vcTimer = 0;
 map.on("moveend", () => {
   clearTimeout(vcTimer);
@@ -4089,7 +4184,7 @@ function sbConfig() {
   }
   return null;
 }
-var APP_VERSION = "1.0 \xB7 24. 10. 2026";
+var APP_VERSION = "1.1 \xB7 25. 10. 2026";
 var tileI = (ico, c) => `<span class="tile" style="--c:${c}">${svg(ico)}</span>`;
 var tgl = (k, label) => `<button type="button" class="toggle ${prefs[k] ? "on" : ""}" data-act="pref" data-k="${k}" role="switch" aria-checked="${!!prefs[k]}" aria-label="${label}"><i></i></button>`;
 var srow = (ico, c, title, sub, right = "") => `<div class="sr">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${right}</div>`;
@@ -4150,7 +4245,7 @@ var gpsGroup = () => sgroup(
 var mapGroup = () => sgroup(
   "map",
   "Mapa a adresy",
-  trow("pointer", "#F93A25", "quick", "Klepnut\xEDm = rozneseno", "Zelen\xE1 budova otev\u0159e detail") + srow("file", "#FF9500", "Let\xE1k\u016F za budovu", "", `<div class="mini-step"><button type="button" data-act="q-" aria-label="M\xE9n\u011B">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+" aria-label="V\xEDce">+</button></div>`) + trow("home", "#30B651", "icons", "Ikony stavu", "Na budov\xE1ch p\u0159i p\u0159ibl\xED\u017Een\xED") + trow("road", "#5856D6", "areas", "Ulice a oblasti", "Zobrazit na map\u011B") + segrow("layers", "#30B0C7", "basemap", "Podklad mapy", [["osm", "Standardn\xED"], ["light", "Sv\u011Btl\xFD"], ["auto", "Auto"]], "Auto = tmav\xE1 mapa v tmav\xE9m vzhledu") + srow("dashboard", "#8E8E93", "Barvy stav\u016F", "", `<span class="sdots">${ORDER.map((k) => `<i data-status="${k}" title="${STATUS[k].label}"></i>`).join("")}</span>`) + linkrow("refresh", "#007AFF", "cache-clear", "St\xE1hnout mapov\xE1 data znovu", `${num(B.size)} budov`),
+  trow("pointer", "#F93A25", "quick", "Klepnut\xEDm = rozneseno", "Zelen\xE1 budova otev\u0159e detail") + srow("file", "#FF9500", "Let\xE1k\u016F za budovu", "", `<div class="mini-step"><button type="button" data-act="q-" aria-label="M\xE9n\u011B">\u2212</button><b>${prefs.flyers}</b><button type="button" data-act="q+" aria-label="V\xEDce">+</button></div>`) + trow("home", "#30B651", "icons", "Ikony stavu", "Na budov\xE1ch p\u0159i p\u0159ibl\xED\u017Een\xED") + trow("home", "#8E8E93", "hideAux", "Skr\xFDt gar\xE1\u017Ee a p\u0159\xEDstavky", "Na map\u011B jen obytn\xE9 domy \u2013 rychlej\u0161\xED roznos") + trow("road", "#5856D6", "areas", "Ulice a oblasti", "Zobrazit na map\u011B") + segrow("layers", "#30B0C7", "basemap", "Podklad mapy", [["osm", "Standardn\xED"], ["light", "Sv\u011Btl\xFD"], ["auto", "Auto"]], "Auto = tmav\xE1 mapa v tmav\xE9m vzhledu") + srow("dashboard", "#8E8E93", "Barvy stav\u016F", "", `<span class="sdots">${ORDER.map((k) => `<i data-status="${k}" title="${STATUS[k].label}"></i>`).join("")}</span>`) + linkrow("refresh", "#007AFF", "cache-clear", "St\xE1hnout mapov\xE1 data znovu", `${num(B.size)} budov`),
   "Obrysy budov se dr\u017E\xED v za\u0159\xEDzen\xED " + CFG.cacheDays + " dn\xED."
 );
 var lookGroup = () => sgroup(
@@ -4616,7 +4711,23 @@ function applyPref(k) {
     ensureLoop();
   } else if (["anim", "theme", "density", "basemap"].includes(k)) applyLook();
   else if (k === "icons") updateIcons();
-  else if (k === "areas") {
+  else if (k === "hideAux") {
+    if (prefs.hideAux) {
+      for (const [id, b] of [...B]) if (b.aux && !rec(id) && !(state.sel && state.sel.id === id)) {
+        dropBuilding(id);
+        AUX.set(id, b);
+      }
+    } else {
+      for (const b of AUX.values()) {
+        delete b.layer;
+        delete b.icon;
+        addBuilding(b);
+      }
+      AUX.clear();
+    }
+    toast(prefs.hideAux ? "Gar\xE1\u017Ee a p\u0159\xEDstavky jsou skryt\xE9." : "Na map\u011B jsou i gar\xE1\u017Ee a p\u0159\xEDstavky.");
+    if (!state.sel) softRender();
+  } else if (k === "areas") {
     for (const a of store.all("areas")) drawArea(a.id);
   } else if (k === "shareLoc") {
     if (!prefs.shareLoc) team.hideMe().catch(() => {
@@ -5066,6 +5177,8 @@ $("#panel-body").addEventListener("click", (e) => {
     case "cache-clear":
       overpass.clearCache().then(() => {
         for (const id of [...B.keys()]) if (!rec(id)) dropBuilding(id);
+        AUX.clear();
+        AUX_OF.clear();
         ingested.clear();
         loadView();
         toast("Mapov\xE1 data se stahuj\xED znovu.");
