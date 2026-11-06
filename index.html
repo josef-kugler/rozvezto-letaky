@@ -1340,6 +1340,13 @@ html[data-theme=dark] .btn.dark { background: #3A3A3C; border-color: #3A3A3C; }
 .dlg h3 { margin: 16px 0 6px; }
 .mate-wrap.old .mate-dot { opacity: .75; }
 .mate-wrap.old .mate-n { opacity: .85; }
+
+/* správa organizace (jen pro správce – běžný roznašeč ji nevidí) */
+.o-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.o-acts { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 6px 50px; }
+.o-acts .tbtn { min-height: 36px; }
+.dlg > .mini-link:first-child { padding-left: 0; margin-bottom: 4px; }
+.dlg select { width: 100%; }
 </style>
 </head>
 <body>
@@ -1454,6 +1461,9 @@ var COLUMNS = {
   areas: ["id", "kind", "name", "municipality", "geometry", "osm_way_ids", "status", "last_visit", "notes", "deleted"],
   visits: ["id", "target_type", "target_id", "building_id", "visited_at", "status", "flyers", "entrances_done", "note", "municipality", "deleted"]
 };
+var WORK = /* @__PURE__ */ new Set(["building_records", "entrances", "areas", "visits"]);
+var dbNameFor = (scope) => !scope || scope.legacy ? "rozvezto-flyers" : "rozvezto-c-" + scope.campaignId;
+var isDenied = (e) => !!e && (e.code === "42501" || e.code === "PGRST301" || /row-level security|permission denied/i.test(String(e.message || "")));
 var AUTO_RESOLVE = /* @__PURE__ */ new Set(["buildings", "visits"]);
 function uid() {
   if (globalThis.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -1610,46 +1620,89 @@ var IdbPersist = class {
   }
 };
 var SupabaseRemote = class {
-  constructor(client) {
+  // scope = null → databáze bez více měst; jinak se čte a zapisuje jen aktivní zakázka / město (a server to stejně hlídá přes RLS)
+  constructor(client, scope = null) {
     this.sb = client;
+    this.scope = scope || null;
+  }
+  // stav budovy je na serveru v jiné zakázce pod id „zakázka|budova“ (původní zakázka Dobříše má id beze změny)
+  sid(table, id) {
+    return table === "building_records" && this.scope && !this.scope.legacy ? this.scope.campaignId + "|" + id : id;
+  }
+  // řádek ze serveru → lokální podoba (null = nepatří do aktivní zakázky / města → zahodit)
+  local(table, r) {
+    if (!r || !r.id) return null;
+    const sc = this.scope;
+    if (sc) {
+      if (WORK.has(table) && r.campaign_id !== void 0 && r.campaign_id !== sc.campaignId) return null;
+      if (table === "buildings" && r.city_id !== void 0 && r.city_id !== sc.cityId) return null;
+      if (table === "building_records" && r.building_id) return { ...r, id: r.building_id };
+    }
+    return r;
+  }
+  body(table, row) {
+    const b = payload(table, row), sc = this.scope;
+    if (sc) {
+      if (WORK.has(table)) b.campaign_id = sc.campaignId;
+      if (table === "building_records") {
+        b.building_id = row.id;
+        b.id = this.sid(table, row.id);
+      }
+      if (table === "buildings") b.city_id = sc.cityId;
+    }
+    return b;
   }
   async fetchOne(table, id) {
-    const { data, error } = await this.sb.from(table).select("*").eq("id", id).maybeSingle();
+    const { data, error } = await this.sb.from(table).select("*").eq("id", this.sid(table, id)).maybeSingle();
     if (error) throw error;
-    return data;
+    return this.local(table, data);
   }
   // Zapíše řádek jen pokud na serveru stále platí verze baseRev (0 = řádek ještě neexistuje).
   async push(table, row, baseRev) {
-    const body = payload(table, row);
+    const body = this.body(table, row);
     if (!baseRev) {
       const { data: data2, error: error2 } = await this.sb.from(table).insert({ ...body, rev: 1 }).select().single();
-      if (!error2) return { ok: true, row: data2 };
+      if (!error2) return { ok: true, row: this.local(table, data2) || data2 };
       if (error2.code !== "23505") throw error2;
-      return { ok: false, remote: await this.fetchOne(table, row.id) };
+      const remote2 = await this.fetchOne(table, row.id);
+      if (!remote2) throw Object.assign(new Error("Z\xE1znam pat\u0159\xED do jin\xE9 zak\xE1zky nebo k n\u011Bmu nem\xE1\u0161 p\u0159\xEDstup"), { code: "42501" });
+      return { ok: false, remote: remote2 };
     }
-    const { data, error } = await this.sb.from(table).update({ ...body, rev: baseRev + 1 }).eq("id", row.id).eq("rev", baseRev).select();
+    const { data, error } = await this.sb.from(table).update({ ...body, rev: baseRev + 1 }).eq("id", body.id).eq("rev", baseRev).select();
     if (error) throw error;
-    if (data && data.length) return { ok: true, row: data[0] };
+    if (data && data.length) return { ok: true, row: this.local(table, data[0]) || data[0] };
     const remote = await this.fetchOne(table, row.id);
     if (!remote) return this.push(table, row, 0);
     return { ok: false, remote };
   }
   async pullSince(table, since) {
-    const out = [];
+    const out = [], sc = this.scope;
     for (let from = 0; ; from += 1e3) {
       let q = this.sb.from(table).select("*").order("updated_at").range(from, from + 999);
+      if (sc && WORK.has(table)) q = q.eq("campaign_id", sc.campaignId);
+      if (sc && table === "buildings") q = q.eq("city_id", sc.cityId);
       if (since) q = q.gt("updated_at", since);
       const { data, error } = await q;
       if (error) throw error;
-      out.push(...data);
+      for (const r of data) {
+        const l = this.local(table, r);
+        if (l) out.push(l);
+      }
       if (data.length < 1e3) break;
     }
     return out;
   }
   subscribe(cb) {
-    let ch = this.sb.channel("rzt-sync");
+    const sc = this.scope;
+    let ch = this.sb.channel(sc ? "rzt-sync-" + sc.campaignId : "rzt-sync");
     for (const t of TABLES) {
-      ch = ch.on("postgres_changes", { event: "*", schema: "public", table: t }, (p) => p.new && p.new.id && cb(t, p.new));
+      const f = { event: "*", schema: "public", table: t };
+      if (sc && WORK.has(t)) f.filter = "campaign_id=eq." + sc.campaignId;
+      if (sc && t === "buildings") f.filter = "city_id=eq." + sc.cityId;
+      ch = ch.on("postgres_changes", f, (p) => {
+        const l = p.new && this.local(t, p.new);
+        if (l) cb(t, l);
+      });
     }
     ch.subscribe();
     return () => this.sb.removeChannel(ch);
@@ -1666,6 +1719,8 @@ var Store = class {
     this.lastError = null;
     this.cursor = {};
     this.busy = false;
+    this.scope = null;
+    this.gen = 0;
   }
   on(fn) {
     this.listeners.push(fn);
@@ -1697,11 +1752,36 @@ var Store = class {
     this.unsub = null;
     if (remote) {
       this.unsub = remote.subscribe((table, row) => {
+        if (this.remote !== remote) return;
         this.applyRemote(table, row, true);
         this.updateState();
       });
     }
     this.updateState();
+  }
+  // Přepnutí na jinou zakázku / město: počká na rozběhnutou synchronizaci, vymění lokální úložiště a vše načte znovu.
+  // Neodeslané změny staré zakázky zůstanou v jejím úložišti a odešlou se, až se na ni přepne zpět (server je znovu ověří).
+  async switchScope({ persist: persist2, remote, scope }) {
+    const gen = ++this.gen;
+    clearTimeout(this.timer);
+    if (this.unsub) this.unsub();
+    this.unsub = null;
+    this.remote = null;
+    for (let i = 0; this.busy && i < 200; i++) await new Promise((r) => setTimeout(r, 50));
+    if (gen !== this.gen) return false;
+    this.persist = persist2;
+    this.scope = scope || null;
+    for (const t of TABLES) this.t[t] = /* @__PURE__ */ new Map();
+    this.conflicts = [];
+    this.cursor = {};
+    this.lastSync = null;
+    this.lastError = null;
+    this.offline = false;
+    await this.init();
+    if (gen !== this.gen) return false;
+    this.emit({ type: "reset" });
+    this.setRemote(remote);
+    return true;
   }
   get(table, id) {
     const r = this.t[table].get(id);
@@ -1715,13 +1795,41 @@ var Store = class {
   }
   pending() {
     let n = 0;
-    for (const t of TABLES) for (const r of this.t[t].values()) if (r._dirty) n++;
+    for (const t of TABLES) for (const r of this.t[t].values()) if (r._dirty && !r._rejected) n++;
     return n;
+  }
+  // změny, které server odmítl kvůli oprávnění (např. odebraný přístup k zakázce) – nejsou synchronizované
+  rejected() {
+    const out = [];
+    for (const t of TABLES) for (const r of this.t[t].values()) if (r._rejected) out.push({ table: t, row: r });
+    return out;
+  }
+  // zahodit odmítnuté změny: vrátí se poslední stav ze serveru (nebo záznam lokálně zmizí, pokud na serveru není)
+  async discardRejected() {
+    const list = this.rejected();
+    for (const { table, row } of list) {
+      let remote = null;
+      try {
+        remote = this.remote ? await this.remote.fetchOne(table, row.id) : null;
+      } catch (e) {
+      }
+      if (remote) {
+        const next = { ...remote, _dirty: false, _ver: 0 };
+        this.t[table].set(row.id, next);
+        await this.persist.putRow(table, next);
+      } else {
+        this.t[table].delete(row.id);
+        await this.persist.delRow(table, row.id);
+      }
+      this.emit({ type: "change", table, id: row.id, remote: true });
+    }
+    this.updateState();
+    return list.length;
   }
   // Uloží (nebo vytvoří) řádek lokálně a naplánuje odeslání.
   put(table, row) {
     const old = this.t[table].get(row.id);
-    const next = { ...old || {}, ...row, rev: old ? old.rev || 0 : 0, _dirty: true, _ver: (old && old._ver || 0) + 1, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+    const next = { ...old || {}, ...row, rev: old ? old.rev || 0 : 0, _dirty: true, _rejected: false, _ver: (old && old._ver || 0) + 1, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
     this.t[table].set(next.id, next);
     this.persist.putRow(table, next).catch((e) => {
       this.fail(e);
@@ -1748,6 +1856,7 @@ var Store = class {
     let s;
     if (!this.remote) s = "local";
     else if (this.conflicts.length) s = "conflict";
+    else if (!this.busy && this.rejected().length) s = "rejected";
     else if (this.busy) s = "syncing";
     else if (this.offline) s = typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "error";
     else s = this.pending() ? "pending" : "synced";
@@ -1803,14 +1912,31 @@ var Store = class {
   }
   async sync() {
     if (!this.remote || this.busy) return;
+    const gen = this.gen, remote = this.remote;
+    const stale = () => gen !== this.gen || remote !== this.remote;
     this.busy = true;
     this.updateState();
     try {
       for (const table of TABLES) {
         for (const row of [...this.t[table].values()]) {
-          if (!row._dirty || this.conflicts.some((c) => c.table === table && c.id === row.id)) continue;
+          if (!row._dirty || row._rejected || this.conflicts.some((c) => c.table === table && c.id === row.id)) continue;
           const ver = row._ver;
-          const res = await this.remote.push(table, row, row.rev || 0);
+          let res;
+          try {
+            res = await remote.push(table, row, row.rev || 0);
+          } catch (e) {
+            if (stale()) return;
+            if (!isDenied(e)) throw e;
+            const cur2 = this.t[table].get(row.id);
+            if (cur2 && cur2._ver === ver) {
+              cur2._rejected = true;
+              this.lastDenied = e;
+              await this.persist.putRow(table, cur2);
+              this.emit({ type: "rejected", table, id: row.id });
+            }
+            continue;
+          }
+          if (stale()) return;
           const cur = this.t[table].get(row.id);
           if (res.ok) {
             cur.rev = res.row.rev;
@@ -1824,7 +1950,8 @@ var Store = class {
             cur._dirty = false;
             await this.persist.putRow(table, cur);
           } else if (AUTO_RESOLVE.has(table)) {
-            const again = await this.remote.push(table, cur, res.remote.rev);
+            const again = await remote.push(table, cur, res.remote.rev);
+            if (stale()) return;
             if (again.ok) {
               cur.rev = again.row.rev;
               if (cur._ver === ver) cur._dirty = false;
@@ -1835,12 +1962,14 @@ var Store = class {
       }
       for (const table of TABLES) {
         const since = this.cursor[table] ? new Date(new Date(this.cursor[table]).getTime() - 5e3).toISOString() : null;
-        const rows = await this.remote.pullSince(table, since);
+        const rows = await remote.pullSince(table, since);
+        if (stale()) return;
         for (const r of rows) {
           this.applyRemote(table, r);
           if (!this.cursor[table] || r.updated_at > this.cursor[table]) this.cursor[table] = r.updated_at;
         }
       }
+      if (stale()) return;
       await this.persist.set("cursor", this.cursor);
       this.offline = false;
       this.lastError = null;
@@ -1848,19 +1977,23 @@ var Store = class {
       this.persist.set("lastSync", this.lastSync.toISOString()).catch(() => {
       });
     } catch (e) {
-      this.offline = true;
-      this.fail(e);
+      if (!stale()) {
+        this.offline = true;
+        this.fail(e);
+      }
     } finally {
       this.busy = false;
       this.updateState();
-      if (!this.offline && this.pending() > this.conflicts.length) this.schedule(300);
+      if (!stale() && !this.offline && this.pending() > this.conflicts.length) this.schedule(300);
     }
   }
   // ---------- záloha ----------
   exportAll() {
     const tables = {};
     for (const t of TABLES) tables[t] = [...this.t[t].values()].map((r) => payload(t, r));
-    return { app: "rozvezto-flyer-tracker", version: 1, exported_at: (/* @__PURE__ */ new Date()).toISOString(), tables };
+    const out = { app: "rozvezto-flyer-tracker", version: 1, exported_at: (/* @__PURE__ */ new Date()).toISOString(), tables };
+    if (this.scope) out.scope = { campaign_id: this.scope.campaignId, city_id: this.scope.cityId, campaign: this.scope.campaignName || "", city: this.scope.cityName || "" };
+    return out;
   }
   importAll(dump) {
     let n = 0;
@@ -2412,9 +2545,25 @@ var Team = class {
     this.sentAt = 0;
     this.sharing = false;
     this.queued = null;
+    this.ctx = null;
+    this.cityId = null;
   }
+  // správce = rozhoduje server (rzt_my_context / team_members), ne nic uloženého v zařízení
   get isAdmin() {
-    return this.mode === "member" && this.me && this.me.role === "admin";
+    return this.mode === "member" && (this.ctx ? !!this.ctx.admin : !!(this.me && this.me.role === "admin"));
+  }
+  get multi() {
+    return !!this.ctx;
+  }
+  // týmy, které smím spravovat (centrální správce všechny v aktivních městech kontextu)
+  managedTeams() {
+    if (!this.ctx) return [];
+    const out = [];
+    for (const c of this.ctx.cities || []) for (const t of c.teams || []) if (this.ctx.admin || t.role === "manager") out.push({ ...t, city: c });
+    return out;
+  }
+  get isManager() {
+    return this.mode === "member" && !!this.ctx && !this.ctx.admin && this.managedTeams().length > 0;
   }
   nameOf(uid2) {
     if (!uid2) return "";
@@ -2445,6 +2594,12 @@ var Team = class {
       return this.mode;
     }
     this.me = me;
+    await this.loadContext();
+    if (this.ctx && !this.ctx.member) {
+      this.mode = "outsider";
+      this.onChange("mode");
+      return this.mode;
+    }
     this.mode = "member";
     await this.loadMembers();
     this.subscribe();
@@ -2452,6 +2607,40 @@ var Team = class {
     this.timer = setInterval(() => this.refresh(), 15e3);
     this.onChange("mode");
     return this.mode;
+  }
+  // oprávnění podle měst, týmů a zakázek (vždy ze serveru); starší databáze funkci nemá → režim jednoho týmu
+  async loadContext() {
+    const { data, error } = await this.sb.rpc("rzt_my_context");
+    if (error) {
+      if (/rzt_my_context|PGRST202|Could not find the function|404/i.test(error.message + " " + (error.code || ""))) {
+        this.ctx = null;
+        return null;
+      }
+      throw error;
+    }
+    this.ctx = data && typeof data === "object" ? data : { member: false, cities: [] };
+    this.onChange("context");
+    return this.ctx;
+  }
+  // přepnutí města: poloha kolegů z dřívějšího města zmizí, načte se jen nové
+  async setCity(id) {
+    if (this.cityId === id) return;
+    this.cityId = id || null;
+    this.sentAt = 0;
+    this.last = null;
+    for (const k of [...this.live.keys()]) this.drop(k);
+    if (this.mode === "member" && this.sb) {
+      if (this.ch) {
+        try {
+          this.sb.removeChannel(this.ch);
+        } catch (e) {
+        }
+        this.ch = null;
+        this.subscribe();
+      }
+      await this.loadLive().catch(() => {
+      });
+    }
   }
   stop() {
     clearInterval(this.timer);
@@ -2469,6 +2658,7 @@ var Team = class {
     this.mode = "off";
     this.sharing = false;
     this.last = null;
+    this.ctx = null;
   }
   async loadMembers() {
     const { data, error } = await this.sb.from("team_members").select("*").order("name");
@@ -2477,9 +2667,19 @@ var Team = class {
     this.onChange("members");
   }
   // správce založí účet rovnou s heslem (funkce v databázi – žádný e-mail, nic se nepotvrzuje)
-  async addMember({ email, name, role, password }) {
-    const { error } = await this.sb.rpc("rzt_add_member", { p_email: String(email).trim().toLowerCase(), p_name: String(name).trim(), p_role: role === "admin" ? "admin" : "member", p_password: password });
-    if (error) throw error;
+  async addMember({ email, name, role, password, teamId, teamRole }) {
+    const e = String(email).trim().toLowerCase(), n = String(name).trim();
+    if (this.ctx) {
+      const { error } = await this.sb.rpc("rzt_add_person", { p_email: e, p_name: n, p_password: password, p_team: teamId || null, p_role: teamRole === "manager" ? "manager" : "member" });
+      if (error) throw error;
+      if (role === "admin") {
+        const r = await this.sb.rpc("rzt_admin_set_person", { p_email: e, p_name: null, p_admin: true, p_active: true });
+        if (r.error) throw r.error;
+      }
+    } else {
+      const { error } = await this.sb.rpc("rzt_add_member", { p_email: e, p_name: n, p_role: role === "admin" ? "admin" : "member", p_password: password });
+      if (error) throw error;
+    }
     await this.loadMembers();
   }
   async setMemberPassword(email, password) {
@@ -2487,7 +2687,7 @@ var Team = class {
     if (error) throw error;
   }
   async updateMember(email, patch) {
-    const { error } = await this.sb.from("team_members").update(patch).eq("email", email);
+    const { error } = this.ctx ? await this.sb.rpc("rzt_admin_set_person", { p_email: email, p_name: patch.name == null ? null : patch.name, p_admin: patch.role == null ? null : patch.role === "admin", p_active: patch.active == null ? null : !!patch.active }) : await this.sb.from("team_members").update(patch).eq("email", email);
     if (error) throw error;
     await this.loadMembers();
   }
@@ -2504,19 +2704,27 @@ var Team = class {
   }
   // ---------- poloha kolegů naživo ----------
   subscribe() {
-    this.ch = this.sb.channel("rzt-live").on("postgres_changes", { event: "*", schema: "public", table: "live_locations" }, (p) => {
+    const f = { event: "*", schema: "public", table: "live_locations" };
+    if (this.cityId) f.filter = "city_id=eq." + this.cityId;
+    this.ch = this.sb.channel(this.cityId ? "rzt-live-" + this.cityId : "rzt-live").on("postgres_changes", f, (p) => {
       const r = p.new && p.new.user_id ? p.new : null;
       if (r) this.upsertLive(r);
       else if (p.old && p.old.user_id) this.drop(p.old.user_id);
     }).on("postgres_changes", { event: "*", schema: "public", table: "team_members" }, () => {
       this.loadMembers().catch(() => {
       });
-    }).subscribe();
+    });
+    if (this.ctx) for (const t of ["team_memberships", "campaign_teams", "campaigns", "cities", "teams"]) this.ch = this.ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => this.onChange("context-changed"));
+    this.ch.subscribe();
   }
   // načte POSLEDNÍ ZNÁMOU polohu všech členů (i starou) – tabulka má jen jeden řádek na člověka
   async loadLive() {
-    const { data, error } = await this.sb.from("live_locations").select("user_id,name,lat,lon,acc,heading,active,updated_at");
+    const city = this.cityId;
+    let q = this.sb.from("live_locations").select(this.ctx ? "user_id,name,lat,lon,acc,heading,active,updated_at,city_id" : "user_id,name,lat,lon,acc,heading,active,updated_at");
+    if (city) q = q.eq("city_id", city);
+    const { data, error } = await q;
     if (error) throw error;
+    if (city !== this.cityId) return;
     const seen = /* @__PURE__ */ new Set();
     for (const r of data || []) {
       seen.add(r.user_id);
@@ -2530,6 +2738,10 @@ var Team = class {
   }
   upsertLive(r, initial) {
     if (!r || r.user_id === this.uid) return;
+    if (this.cityId && r.city_id !== void 0 && r.city_id !== this.cityId) {
+      this.drop(r.user_id);
+      return;
+    }
     r = { ...r, lat: Number(r.lat), lon: Number(r.lon) };
     const cur = this.live.get(r.user_id);
     if (cur && tsOf(r) < tsOf(cur.row)) return;
@@ -2651,7 +2863,9 @@ var Team = class {
         if (error2) console.warn("[t\xFDm] poloha", error2);
         return;
       }
+      if (!this.sb || this.mode !== "member") return;
       const row = { user_id: this.uid, name: this.me && this.me.name || "", ...part };
+      if (this.cityId) row.city_id = this.cityId;
       const { error } = await this.sb.from("live_locations").upsert(row, { onConflict: "user_id" });
       if (error) {
         console.warn("[t\xFDm] poloha", error);
@@ -2663,6 +2877,58 @@ var Team = class {
       }
       this.onChange("share");
     });
+  }
+};
+var Org = class {
+  constructor(sb2) {
+    this.sb = sb2;
+  }
+  async call(fn, args) {
+    const { data, error } = await this.sb.rpc(fn, args);
+    if (error) throw error;
+    return data;
+  }
+  async rows(table, sel = "*", order = "name") {
+    const { data, error } = await this.sb.from(table).select(sel).order(order);
+    if (error) throw error;
+    return data || [];
+  }
+  // vše, co smím vidět (RLS na serveru vrátí jen povolená města / týmy)
+  async load() {
+    const [cities, teams, campaigns, links, memberships, people, stats] = await Promise.all([
+      this.rows("cities"),
+      this.rows("teams"),
+      this.rows("campaigns", "*", "created_at"),
+      this.rows("campaign_teams", "*", "campaign_id"),
+      this.rows("team_memberships", "*", "email"),
+      this.rows("team_members"),
+      this.call("rzt_campaign_stats").catch(() => [])
+    ]);
+    return { cities, teams, campaigns, links, memberships, people, stats: stats || [] };
+  }
+  saveCity(c) {
+    return this.call("rzt_admin_save_city", { p_id: c.id || null, p_slug: c.slug, p_name: c.name, p_lat: c.lat, p_lon: c.lon, p_zoom: c.zoom || 16, p_radius: c.radius_km || 12, p_active: c.active !== false });
+  }
+  saveTeam(t) {
+    return this.call("rzt_admin_save_team", { p_id: t.id || null, p_city: t.city_id, p_name: t.name, p_active: t.active !== false });
+  }
+  saveCampaign(k) {
+    return this.call("rzt_admin_save_campaign", { p_id: k.id || null, p_city: k.city_id, p_name: k.name, p_status: k.status || "active" });
+  }
+  setCampaignTeam(campaign, team2, on) {
+    return this.call("rzt_set_campaign_team", { p_campaign: campaign, p_team: team2, p_on: !!on });
+  }
+  setMembership(team2, email, role, canAdd, active) {
+    return this.call("rzt_set_membership", { p_team: team2, p_email: email, p_role: role, p_can_add: !!canAdd, p_active: active !== false });
+  }
+  addPerson(email, name, password, team2, role) {
+    return this.call("rzt_add_person", { p_email: String(email).trim().toLowerCase(), p_name: String(name).trim(), p_password: password, p_team: team2 || null, p_role: role === "manager" ? "manager" : "member" });
+  }
+  setPerson(email, { name = null, admin = null, active = null } = {}) {
+    return this.call("rzt_admin_set_person", { p_email: email, p_name: name, p_admin: admin, p_active: active });
+  }
+  setPassword(email, password) {
+    return this.call("rzt_set_member_password", { p_email: email, p_password: password });
   }
 };
 function mateHtml(r, now, isMe) {
@@ -2740,7 +3006,35 @@ function validGeom(g) {
   }
   return ok && n >= (g.type === "Point" ? 1 : g.type.includes("Line") ? 2 : 4);
 }
-var store = new Store({ persist });
+var SCOPEKEY = "rzt-scope";
+var HOME0 = { center: [...CFG.center], homeZoom: CFG.homeZoom, radiusKm: CFG.radiusKm, cityName: "Dob\u0159\xED\u0161" };
+var scope0 = null;
+try {
+  const v = JSON.parse(localStorage.getItem(SCOPEKEY) || "null");
+  if (v && v.campaignId && v.cityId && Number.isFinite(v.lat) && Number.isFinite(v.lon)) scope0 = v;
+} catch (e) {
+}
+function homeFrom(sc) {
+  CFG.center = sc ? [sc.lat, sc.lon] : [...HOME0.center];
+  CFG.homeZoom = sc && Number.isFinite(sc.zoom) ? sc.zoom : HOME0.homeZoom;
+  CFG.radiusKm = sc && Number.isFinite(sc.radius) ? sc.radius : HOME0.radiusKm;
+  CFG.cityName = sc ? sc.cityName : HOME0.cityName;
+}
+homeFrom(scope0);
+async function persistFor(sc) {
+  const name = dbNameFor(sc);
+  if (name === "rozvezto-flyers" || volatile) return name === "rozvezto-flyers" ? persist : new MemoryPersist();
+  const p = new IdbPersist(name);
+  try {
+    await Promise.race([p.open(), new Promise((_, rej) => setTimeout(() => rej(new Error("IndexedDB neodpov\xEDd\xE1")), 4e3))]);
+    return p;
+  } catch (e) {
+    console.warn("[\xFAlo\u017Ei\u0161t\u011B zak\xE1zky]", e);
+    return new MemoryPersist();
+  }
+}
+var store = new Store({ persist: scope0 ? await persistFor(scope0) : persist });
+store.scope = scope0;
 var overpass = new Overpass({ persist, endpoints: CFG.overpassEndpoints, cacheDays: CFG.cacheDays, fetchFn: window.RZT_DEMO_FETCH });
 var B = /* @__PURE__ */ new Map();
 var addrGrid = /* @__PURE__ */ new Map();
@@ -2770,8 +3064,13 @@ map.createPane("sketch").style.zIndex = 440;
 var canvas = L.canvas({ pane: "shapes", tolerance: 0, padding: 0.3 });
 var svgLines = L.svg({ pane: "lines" });
 var svgSketch = L.svg({ pane: "sketch" });
-L.circle(CFG.center, { radius: CFG.radiusKm * 1e3, renderer: svgSketch, interactive: false, color: "#141414", weight: 1.5, dashArray: "6 8", fill: false, opacity: 0.55 }).addTo(map);
-L.circleMarker(CFG.center, { radius: 4, renderer: svgSketch, interactive: false, color: "#F93A25", fillColor: "#F93A25", fillOpacity: 1 }).addTo(map);
+var homeCircle = L.circle(CFG.center, { radius: CFG.radiusKm * 1e3, renderer: svgSketch, interactive: false, color: "#141414", weight: 1.5, dashArray: "6 8", fill: false, opacity: 0.55 }).addTo(map);
+var homeDot = L.circleMarker(CFG.center, { radius: 4, renderer: svgSketch, interactive: false, color: "#F93A25", fillColor: "#F93A25", fillOpacity: 1 }).addTo(map);
+function placeHome() {
+  homeCircle.setLatLng(CFG.center);
+  homeCircle.setRadius(CFG.radiusKm * 1e3);
+  homeDot.setLatLng(CFG.center);
+}
 var toLatLngs = (g) => {
   const ring = (r) => r.map(([x, y]) => [y, x]);
   if (g.type === "Polygon") return g.coordinates.map(ring);
@@ -4184,7 +4483,7 @@ function sbConfig() {
   }
   return null;
 }
-var APP_VERSION = "1.1 \xB7 25. 10. 2026";
+var APP_VERSION = "2.0 \xB7 30. 10. 2026";
 var tileI = (ico, c) => `<span class="tile" style="--c:${c}">${svg(ico)}</span>`;
 var tgl = (k, label) => `<button type="button" class="toggle ${prefs[k] ? "on" : ""}" data-act="pref" data-k="${k}" role="switch" aria-checked="${!!prefs[k]}" aria-label="${label}"><i></i></button>`;
 var srow = (ico, c, title, sub, right = "") => `<div class="sr">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${right}</div>`;
@@ -4194,7 +4493,7 @@ var segrow = (ico, c, k, title, opts, sub) => opts.length === 2 ? `<div class="s
 var linkrow = (ico, c, act, title, val = "", attrs = "") => `<button type="button" class="sr link" data-act="${act}" ${attrs}>${tileI(ico, c)}<span class="sr-t"><b>${title}</b></span>${val ? `<span class="sr-v">${val}</span>` : ""}${svg("chev", "ico sr-chev")}</button>`;
 var kv = (k, v) => `<div class="sr kv"><span>${k}</span><b>${v}</b></div>`;
 var sgroup = (id, title, body, foot) => `<h5 class="sg-h" id="sg-${id}">${title}</h5><div class="sg" data-g="${id}">${body}</div>${foot ? `<p class="sg-f">${foot}</p>` : ""}`;
-var SYNC_TONE = { synced: "ok", syncing: "busy", pending: "busy", offline: "warn", error: "bad", conflict: "bad", local: "", login: "", outsider: "warn" };
+var SYNC_TONE = { synced: "ok", syncing: "busy", pending: "busy", offline: "warn", error: "bad", conflict: "bad", rejected: "bad", local: "", login: "", outsider: "warn" };
 function syncState() {
   const c = sbConfig();
   return !c ? "local" : !session ? "login" : team.mode === "outsider" ? "outsider" : store.state;
@@ -4230,6 +4529,7 @@ function accountGroup() {
     body += `<div class="acct-more">${team.me ? kv("Jm\xE9no", `${esc2(team.me.name)} <button type="button" class="mini-link" data-act="my-name">Upravit</button>`) + kv("Role", team.me.role === "admin" ? "Spr\xE1vce" : "\u010Clen t\xFDmu") : ""}${kv("E-mail", esc2(email))}${kv("P\u0159ipojen\xED", navigator.onLine ? "Online" : '<span class="t-warn">Offline</span>')}
       ${kv("Posledn\xED synchronizace", store.lastSync ? fmtTime(store.lastSync.toISOString()) : "Zat\xEDm neprob\u011Bhla")}${kv("Neodeslan\xE9 zm\u011Bny", pend ? `<span class="t-warn">${num(pend)}</span>` : "\u017D\xE1dn\xE9")}
       ${store.lastError && (st === "error" || st === "offline") ? `<p class="sr-err" role="alert">${esc2(errText(store.lastError))}</p>` : ""}
+      ${st === "rejected" ? `<p class="sr-err" role="alert">${num(store.rejected().length)} ${store.rejected().length === 1 ? "zm\u011Bnu" : "zm\u011Bn"} server odm\xEDtl \u2013 v tomto m\u011Bst\u011B u\u017E nem\xE1\u0161 opr\xE1vn\u011Bn\xED zapisovat. Z\u016Fst\xE1vaj\xED jen v za\u0159\xEDzen\xED.</p><button type="button" class="sr act bad" data-act="rejected-drop">${svg("x")}<span>Zahodit odm\xEDtnut\xE9 zm\u011Bny</span></button>` : ""}
       ${st === "conflict" ? `<button type="button" class="sr act" data-act="conflicts">${svg("revisit")}<span>Vy\u0159e\u0161it konflikty (${store.conflicts.length})</span></button>` : `<button type="button" class="sr act" data-act="sb-sync" ${st === "syncing" ? "disabled" : ""}>${svg("refresh")}<span>${st === "syncing" ? "Synchronizuji\u2026" : "Synchronizovat te\u010F"}</span></button>`}
       <button type="button" class="sr act" data-act="pass-change">${svg("key")}<span>Zm\u011Bnit heslo</span></button>
       <button type="button" class="sr act bad" data-act="sb-logout">${svg("logout")}<span>Odhl\xE1sit se</span></button></div>`;
@@ -4268,7 +4568,7 @@ var aboutGroup = () => sgroup(
   "O aplikaci",
   kv("Verze", APP_VERSION) + linkrow("help", "#007AFF", "help", "N\xE1pov\u011Bda") + `<div class="sr-pad"><p class="sg-note">Mapov\xE1 data \xA9 p\u0159isp\u011Bvatel\xE9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (ODbL) \xB7 Overpass API \xB7 Nominatim \xB7 Leaflet${prefs.basemap !== "osm" ? " \xB7 podklad \xA9 CARTO" : ""}</p></div>`
 );
-var settingsHtml = () => `<div class="set">${accountGroup()}${teamGroup()}${gpsGroup()}${mapGroup()}${lookGroup()}${dataGroup()}${aboutGroup()}</div>`;
+var settingsHtml = () => `<div class="set">${accountGroup()}${scopeGroup()}${teamGroup()}${gpsGroup()}${mapGroup()}${lookGroup()}${dataGroup()}${aboutGroup()}</div>`;
 function showHelp() {
   modal(`<h2>Jak na to</h2><ol class="help">
     <li><b>Klepni na budovu</b> \u2013 zezelen\xE1 jako rozneseno. Druh\xFDm klepnut\xEDm otev\u0159e\u0161 detail (vchody, pozn\xE1mka, jin\xFD stav).</li>
@@ -4299,6 +4599,336 @@ function teamGroup() {
     team.isAdmin ? "P\u0159id\xE1n\xEDm rovnou vznikne \xFA\u010Det s heslem \u2013 nic se nepos\xEDl\xE1 ani nepotvrzuje." : "\u010Cleny p\u0159id\xE1v\xE1 spr\xE1vce t\xFDmu."
   );
 }
+function scopeGroup() {
+  if (!session || team.mode !== "member" || !team.ctx) return "";
+  const opts = scopeOptions(), sc = store.scope;
+  if (opts.length < 2 && !team.isAdmin && !team.isManager) return "";
+  const role = team.isAdmin ? "Centr\xE1ln\xED spr\xE1vce" : team.isManager ? "Spr\xE1vce t\xFDmu" : "Rozna\u0161e\u010D";
+  const cur = sc ? esc2(sc.cityName) : "\u017D\xE1dn\xE9 m\u011Bsto";
+  const body = (opts.length > 1 ? linkrow("globe", "#F93A25", "scope-pick", "Pracuji v", cur) : srow("globe", "#F93A25", "Pracuji v", "", `<span class="sr-v">${cur}</span>`)) + kv("Moje role", role) + (team.isAdmin ? linkrow("shield", "#5856D6", "org-open", "Organizace", "M\u011Bsta, t\xFDmy, lid\xE9") : team.isManager ? linkrow("users", "#5856D6", "org-open", "M\u016Fj t\xFDm", "\u010Clenov\xE9 a statistiky") : "");
+  return sgroup("scope", "M\u011Bsto", body, sc && !sc.canWrite ? "Roznos v tomto m\u011Bst\u011B je ukon\u010Den\xFD \u2013 jen pro \u010Dten\xED." : "Vid\xED\u0161 jen m\u011Bsta, ke kter\xFDm m\xE1\u0161 p\u0159\xEDstup.");
+}
+function scopePicker() {
+  const opts = scopeOptions(), cur = store.scope && store.scope.campaignId;
+  modal(`<h2>Pracuji v</h2><p>Mapa, evidence i poloha koleg\u016F se p\u0159epnou na vybran\xE9 m\u011Bsto. Neodeslan\xE9 zm\u011Bny z\u016Fstanou u sv\xE9ho m\u011Bsta.</p>
+    <div class="sg">${opts.map((o) => `<button type="button" class="sr link" data-m="pick" data-id="${esc2(o.campaignId)}">${tileI("globe", o.campaignId === cur ? "#F93A25" : "#8E8E93")}<span class="sr-t"><b>${esc2(o.cityName)}</b>${o.canWrite ? "" : "<small>Jen pro \u010Dten\xED</small>"}</span>${o.campaignId === cur ? '<span class="sr-v">\u2713</span>' : svg("chev", "ico sr-chev")}</button>`).join("")}</div>
+    <div class="btns"><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`, {});
+  $("#modal").onclick = (e) => {
+    const b = e.target.closest("[data-m]");
+    if (!b) return;
+    if (b.dataset.m === "x") {
+      closeModal();
+      return;
+    }
+    const o = opts.find((x) => x.campaignId === b.dataset.id);
+    closeModal();
+    if (o && o.campaignId !== cur) switchScope(o, "user").then(() => toast(`Te\u010F pracuje\u0161 v: ${scopeLabel(o)}.`));
+  };
+}
+var ORG = { api: null, d: null, stack: [] };
+var ROLE_T = { manager: "Spr\xE1vce t\xFDmu", member: "Rozna\u0161e\u010D" };
+function orgErr(e) {
+  const m = String(e && (e.message || e.details) || e || "");
+  if (/PGRST202|Could not find the function/i.test(m)) return "V datab\xE1zi chyb\xED multicity.sql \u2013 spus\u0165 ho v Supabase (SQL Editor).";
+  if (/duplicate|23505/i.test(m)) return "Takov\xFD n\xE1zev u\u017E existuje.";
+  if (/permission denied|row-level|42501/i.test(m) && !/[áéěíóúůýčďňřšťž]/i.test(m)) return "Na tohle nem\xE1\u0161 opr\xE1vn\u011Bn\xED.";
+  if (!navigator.onLine || /fetch|network/i.test(m)) return "Nejde se spojit se serverem.";
+  return m.slice(0, 160);
+}
+async function orgOpen(screen = "home", arg = null) {
+  if (!sb || !team.ctx) return;
+  ORG.api = ORG.api || new Org(sb);
+  modal("<h2>Na\u010D\xEDt\xE1m\u2026</h2>", {});
+  try {
+    ORG.d = await ORG.api.load();
+  } catch (e) {
+    modal(`<h2>Organizace</h2><p class="lg-err">${esc2(orgErr(e))}</p><div class="btns"><button class="btn" data-m="x">Zav\u0159\xEDt</button></div>`, { x: closeModal });
+    return;
+  }
+  orgShow(screen, arg);
+}
+var cityName = (id) => {
+  const c = ORG.d.cities.find((x) => x.id === id);
+  return c ? c.name : "?";
+};
+var personName = (email) => {
+  const p = ORG.d.people.find((x) => x.email === email);
+  return p ? p.name : email;
+};
+var oRow = (ico, c, s, a, title, sub, val = "") => `<button type="button" class="sr link" data-o="go" data-s="${s}" data-a="${esc2(a || "")}">${tileI(ico, c)}<span class="sr-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</span>${val ? `<span class="sr-v">${val}</span>` : ""}${svg("chev", "ico sr-chev")}</button>`;
+var oSeg = (id, opts, cur) => `<div class="seg" role="radiogroup" id="${id}">${opts.map(([v, t]) => `<button type="button" role="radio" class="${cur === v ? "on" : ""}" aria-checked="${cur === v}" data-v="${v}">${t}</button>`).join("")}</div>`;
+var oTgl = (id, on, label) => `<div class="sr"><span class="sr-t"><b>${label}</b></span><button type="button" class="toggle ${on ? "on" : ""}" id="${id}" role="switch" aria-checked="${!!on}" aria-label="${label}" data-o="tgl"><i></i></button></div>`;
+var oVal = (id) => {
+  const el = $("#" + id);
+  return el ? el.value.trim() : "";
+};
+var oSegVal = (id) => {
+  const b = $("#" + id + " .on");
+  return b ? b.dataset.v : null;
+};
+var oOn = (id) => {
+  const b = $("#" + id);
+  return !!b && b.classList.contains("on");
+};
+function statLine(k) {
+  const st = ORG.d.stats.find((x) => x.campaign_id === k.id);
+  return st ? `${num(st.done)} rozneseno \xB7 ${num(st.partial)} \u010D\xE1ste\u010Dn\u011B \xB7 ${num(st.flyers)} let\xE1k\u016F` : "Zat\xEDm bez evidence";
+}
+function orgShow(screen, arg) {
+  const d = ORG.d, admin = team.isAdmin;
+  const myTeams = admin ? d.teams : d.teams.filter((t) => team.managedTeams().some((m) => m.id === t.id));
+  let h = "", back = screen === "home" ? "" : `<button type="button" class="mini-link" data-o="go" data-s="${screen === "city" ? "cities" : screen === "person" ? "people" : screen === "team" && admin ? "teams" : "home"}">\u2039 Zp\u011Bt</button>`;
+  if (screen === "home") {
+    if (admin) {
+      h = `<h2>Organizace</h2><p>Centr\xE1ln\xED spr\xE1va. Nic se nema\u017Ee \u2013 m\u011Bsta, t\xFDmy i lidi lze jen vypnout, historie z\u016Fst\xE1v\xE1.</p><div class="sg">
+        ${oRow("globe", "#F93A25", "cities", "", "M\u011Bsta", "", num(d.cities.length))}
+        ${oRow("users", "#5856D6", "teams", "", "T\xFDmy", "", num(d.teams.length))}
+        ${oRow("userplus", "#34C759", "people", "", "Lid\xE9", "", num(d.people.length))}</div>`;
+    } else {
+      h = `<h2>M\u016Fj t\xFDm</h2><div class="sg">${myTeams.map((t) => oRow("users", "#5856D6", "team", t.id, esc2(t.name), esc2(cityName(t.city_id)), num(d.memberships.filter((m) => m.team_id === t.id && m.active).length))).join("")}</div>`;
+    }
+    const camps = d.campaigns.filter((k) => admin || d.links.some((l) => l.campaign_id === k.id && myTeams.some((t) => t.id === l.team_id)));
+    if (camps.length) h += `<h3>Jak jsme daleko</h3><div class="sg">${camps.map((k) => `<div class="sr"><span class="sr-t"><b>${esc2(cityName(k.city_id))}</b><small>${statLine(k)}</small></span></div>`).join("")}</div>`;
+  } else if (screen === "cities") {
+    h = `<h2>M\u011Bsta</h2><div class="sg">${d.cities.map((c) => oRow("globe", c.active ? "#F93A25" : "#8E8E93", "city", c.id, esc2(c.name), c.active ? `${num(d.teams.filter((t) => t.city_id === c.id).length)} ${d.teams.filter((t) => t.city_id === c.id).length === 1 ? "t\xFDm" : "t\xFDmy"} \xB7 ${d.campaigns.filter((k) => k.city_id === c.id).map(statLine)[0] || "Zat\xEDm bez evidence"}` : "Vypnuto")).join("")}
+      ${oRow("plus", "#34C759", "city", "", "P\u0159idat m\u011Bsto", "")}</div>`;
+  } else if (screen === "city") {
+    const c = d.cities.find((x) => x.id === arg) || { name: "", slug: "", lat: +map.getCenter().lat.toFixed(5), lon: +map.getCenter().lng.toFixed(5), zoom: 16, radius_km: 12, active: true };
+    h = `<h2>${c.id ? esc2(c.name) : "Nov\xE9 m\u011Bsto"}</h2>
+      <label class="field"><span>N\xE1zev</span><input id="o-name" maxlength="60" value="${esc2(c.name)}" placeholder="nap\u0159. Ho\u0159ovice"></label>
+      <input id="o-slug" type="hidden" value="${esc2(c.slug)}">
+      <div class="o-2"><label class="field"><span>St\u0159ed \u2013 \u0161\xED\u0159ka</span><input id="o-lat" inputmode="decimal" value="${c.lat}"></label><label class="field"><span>St\u0159ed \u2013 d\xE9lka</span><input id="o-lon" inputmode="decimal" value="${c.lon}"></label></div>
+      <button type="button" class="mini-link" data-o="here">Pou\u017E\xEDt st\u0159ed mapy</button>
+      <div class="o-2"><label class="field"><span>P\u0159ibl\xED\u017Een\xED</span><input id="o-zoom" inputmode="numeric" value="${c.zoom}"></label><label class="field"><span>Okruh (km)</span><input id="o-radius" inputmode="decimal" value="${c.radius_km}"></label></div>
+      <div class="sg">${oTgl("o-active", c.active, "M\u011Bsto je aktivn\xED")}</div>
+      <p class="hint">${c.id ? "Vypnut\xE9 m\u011Bsto nikdo krom\u011B centr\xE1ln\xEDch spr\xE1vc\u016F neuvid\xED; data a historie z\u016Fstanou." : "S m\u011Bstem se rovnou zalo\u017E\xED jeho t\xFDm \u2013 pak do n\u011Bj jen p\u0159id\xE1\u0161 lidi (T\xFDmy)."}</p>
+      <div class="btns"><button class="btn pri" data-o="save-city" data-a="${esc2(c.id || "")}">Ulo\u017Eit</button></div>`;
+  } else if (screen === "teams") {
+    h = `<h2>T\xFDmy</h2>${d.cities.map((c) => `<h3>${esc2(c.name)}</h3><div class="sg">${d.teams.filter((t) => t.city_id === c.id).map((t) => oRow("users", t.active ? "#5856D6" : "#8E8E93", "team", t.id, esc2(t.name), t.active ? `${num(d.memberships.filter((m) => m.team_id === t.id && m.active).length)} lid\xED` : "Vypnut\xFD")).join("")}
+      <button type="button" class="sr link" data-o="new-team" data-a="${esc2(c.id)}">${tileI("plus", "#34C759")}<span class="sr-t"><b>P\u0159idat t\xFDm</b></span>${svg("chev", "ico sr-chev")}</button></div>`).join("")}`;
+  } else if (screen === "team") {
+    const t = d.teams.find((x) => x.id === arg);
+    if (!t) {
+      orgShow("home");
+      return;
+    }
+    const mine = team.managedTeams().find((x) => x.id === t.id), canAdd = admin || mine && mine.can_add_members;
+    const ms = d.memberships.filter((m) => m.team_id === t.id).sort((a, b) => b.active - a.active || personName(a.email).localeCompare(personName(b.email), "cs"));
+    const camps = d.campaigns.filter((k) => k.city_id === t.city_id);
+    h = `<h2>${esc2(t.name)}</h2><p>${esc2(cityName(t.city_id))}${t.active ? "" : " \xB7 t\xFDm je vypnut\xFD"}</p>
+      ${admin ? `<label class="field"><span>N\xE1zev t\xFDmu</span><input id="o-name" maxlength="60" value="${esc2(t.name)}"></label><div class="sg">${oTgl("o-active", t.active, "T\xFDm je aktivn\xED")}</div><div class="btns"><button class="btn sm" data-o="save-team" data-a="${esc2(t.id)}">Ulo\u017Eit t\xFDm</button></div>` : ""}
+      <h3>Lid\xE9 v t\xFDmu</h3><div class="sg">${ms.map((m) => {
+      const p = d.people.find((x) => x.email === m.email), isAdm = p && p.role === "admin", self = m.email === (team.me && team.me.email);
+      const editable = admin || !self && !isAdm && m.role === "member";
+      return `<div class="sr col"><div class="sr-top"><span class="mate-av" style="--c:${colorFor(p && p.user_id || m.email)}">${esc2(initialsOf(personName(m.email)))}</span><span class="sr-t"><b>${esc2(personName(m.email))}${isAdm ? ' <em class="badge-s">Centr\xE1ln\xED spr\xE1vce</em>' : ""}</b><small>${esc2(m.email)} \xB7 ${m.active ? ROLE_T[m.role] + (m.role === "manager" && m.can_add_members ? " (sm\xED p\u0159id\xE1vat)" : "") : "Vypnuto"}</small></span></div>
+          ${editable ? `<div class="o-acts">${admin ? `<button type="button" class="tbtn soft" data-o="ms-role" data-a="${esc2(m.email)}">${m.role === "manager" ? "Ud\u011Blat rozna\u0161e\u010Dem" : "Ud\u011Blat spr\xE1vcem t\xFDmu"}</button>${m.role === "manager" ? `<button type="button" class="tbtn soft" data-o="ms-add" data-a="${esc2(m.email)}">${m.can_add_members ? "Zak\xE1zat p\u0159id\xE1v\xE1n\xED" : "Povolit p\u0159id\xE1v\xE1n\xED"}</button>` : ""}` : ""}
+            <button type="button" class="tbtn soft" data-o="ms-active" data-a="${esc2(m.email)}">${m.active ? "Vypnout" : "Zapnout"}</button>${!isAdm && (admin || m.role === "member") ? `<button type="button" class="tbtn soft" data-o="ms-pw" data-a="${esc2(m.email)}">Nov\xE9 heslo</button>` : ""}</div>` : ""}</div>`;
+    }).join("") || '<div class="sr"><span class="sr-t"><small>Zat\xEDm nikdo</small></span></div>'}</div>
+      ${canAdd ? `<h3>P\u0159idat do t\xFDmu</h3>
+        ${admin ? `<label class="field"><span>Existuj\xEDc\xED \u010Dlov\u011Bk</span><select id="o-person"><option value="">\u2014 vyber \u2014</option>${d.people.filter((p) => !ms.some((m) => m.email === p.email)).map((p) => `<option value="${esc2(p.email)}">${esc2(p.name)} (${esc2(p.email)})</option>`).join("")}</select></label>
+          <div class="field"><span>Role v t\xFDmu</span>${oSeg("o-trole", [["member", "Rozna\u0161e\u010D"], ["manager", "Spr\xE1vce t\xFDmu"]], "member")}</div>
+          <div class="btns"><button class="btn sm" data-o="ms-new" data-a="${esc2(t.id)}">P\u0159idat vybran\xE9ho</button></div>` : ""}
+        <div class="btns"><button class="btn pri" data-o="person-new" data-a="${esc2(t.id)}">Zalo\u017Eit nov\xFD \xFA\u010Det</button></div>` : ""}`;
+  } else if (screen === "people") {
+    h = `<h2>Lid\xE9</h2><div class="sg">${d.people.map((p) => oRow("users", p.active ? p.role === "admin" ? "#F93A25" : "#5856D6" : "#8E8E93", "person", p.email, esc2(p.name) + (p.role === "admin" ? ' <em class="badge-s">Centr\xE1ln\xED spr\xE1vce</em>' : ""), `${esc2(p.email)}${p.active ? "" : " \xB7 vypnut\xFD"}`)).join("")}
+      ${oRow("userplus", "#34C759", "person-new", "", "Zalo\u017Eit nov\xFD \xFA\u010Det", "Bez t\xFDmu, nebo rovnou do t\xFDmu")}</div>`;
+  } else if (screen === "person") {
+    const p = d.people.find((x) => x.email === arg);
+    if (!p) {
+      orgShow("people");
+      return;
+    }
+    const self = p.email === (team.me && team.me.email);
+    const ms = d.memberships.filter((m) => m.email === p.email);
+    h = `<h2>${esc2(p.name)}</h2><p>${esc2(p.email)}</p>
+      <label class="field"><span>Jm\xE9no</span><input id="o-name" maxlength="40" value="${esc2(p.name)}"></label>
+      <div class="sg">${self ? "" : oTgl("o-active", p.active, "\xDA\u010Det je aktivn\xED") + oTgl("o-admin", p.role === "admin", "Centr\xE1ln\xED spr\xE1vce")}</div>
+      <p class="hint">Centr\xE1ln\xED spr\xE1vce vid\xED a spravuje v\u0161echna m\u011Bsta. P\u0159id\u011Blujte jen d\u016Fv\u011Bryhodn\xFDm lidem.</p>
+      <div class="btns"><button class="btn pri" data-o="save-person" data-a="${esc2(p.email)}">Ulo\u017Eit</button>${self ? "" : `<button class="btn" data-o="ms-pw" data-a="${esc2(p.email)}">Nastavit nov\xE9 heslo</button>`}</div>
+      <h3>T\xFDmy</h3><div class="sg">${ms.map((m) => {
+      const t = d.teams.find((x) => x.id === m.team_id);
+      return t ? oRow("users", m.active ? "#5856D6" : "#8E8E93", "team", t.id, esc2(t.name), `${esc2(cityName(t.city_id))} \xB7 ${m.active ? ROLE_T[m.role] : "vypnuto"}`) : "";
+    }).join("") || '<div class="sr"><span class="sr-t"><small>Nen\xED v \u017E\xE1dn\xE9m t\xFDmu \u2013 nic neuvid\xED</small></span></div>'}</div>`;
+  } else if (screen === "new-team") {
+    const t = true;
+    h = `<h2>${t ? "Nov\xFD t\xFDm" : "Nov\xE1 zak\xE1zka"}</h2><p>${esc2(cityName(arg))}</p>
+      <label class="field"><span>N\xE1zev</span><input id="o-name" maxlength="80" placeholder="${t ? "nap\u0159. Ho\u0159ovice \u2013 t\xFDm A" : "nap\u0159. Ho\u0159ovice \u2013 podzim 2026"}"></label>
+      <div class="btns"><button class="btn pri" data-o="${t ? "team-create" : "camp-create"}" data-a="${esc2(arg)}">Vytvo\u0159it</button></div>`;
+    back = `<button type="button" class="mini-link" data-o="go" data-s="${t ? "teams" : "campaigns"}">\u2039 Zp\u011Bt</button>`;
+  } else if (screen === "pw") {
+    h = `<h2>Nov\xE9 heslo</h2><p>${esc2(personName(arg))} \xB7 ${esc2(arg)}</p>${pwField("o-pass", "Nov\xE9 heslo")}
+      <div class="btns"><button class="btn pri" data-o="pw-set" data-a="${esc2(arg)}">Nastavit heslo</button></div>`;
+    const bk = ORG.back || { screen: "home" };
+    back = `<button type="button" class="mini-link" data-o="go" data-s="${bk.screen}" data-a="${esc2(bk.arg || "")}">\u2039 Zp\u011Bt</button>`;
+  } else if (screen === "person-new") {
+    const tid = arg || "", t = d.teams.find((x) => x.id === tid), mgrOnly = !admin;
+    h = `<h2>Nov\xFD \xFA\u010Det</h2><p>\xDA\u010Det vznikne hned \u2013 kolega se p\u0159ihl\xE1s\xED e-mailem a heslem, kter\xE9 tady zad\xE1\u0161. Nic se nepos\xEDl\xE1 ani nepotvrzuje.</p>
+      <label class="field"><span>Jm\xE9no (uk\xE1\u017Ee se nad polohou)</span><input id="o-name" maxlength="40" placeholder="nap\u0159. Honza"></label>
+      <label class="field"><span>E-mail (slou\u017E\xED k p\u0159ihl\xE1\u0161en\xED)</span><input id="o-email" type="email" autocapitalize="off" spellcheck="false" placeholder="jmeno@email.cz"></label>
+      ${pwField("o-pass", "Heslo")}
+      <label class="field"><span>T\xFDm</span><select id="o-team" ${mgrOnly ? "disabled" : ""}>${admin ? '<option value="">Zat\xEDm bez t\xFDmu</option>' : ""}${(admin ? d.teams.filter((x) => x.active) : myTeams).map((x) => `<option value="${esc2(x.id)}" ${x.id === tid ? "selected" : ""}>${esc2(x.name)} \u2013 ${esc2(cityName(x.city_id))}</option>`).join("")}</select></label>
+      ${admin ? `<div class="field"><span>Role v t\xFDmu</span>${oSeg("o-trole", [["member", "Rozna\u0161e\u010D"], ["manager", "Spr\xE1vce t\xFDmu"]], "member")}</div>` : '<p class="hint">Spr\xE1vce t\xFDmu p\u0159id\xE1v\xE1 jen rozna\u0161e\u010De do sv\xE9ho t\xFDmu.</p>'}
+      <div class="btns"><button class="btn pri" data-o="person-create" data-a="${esc2(tid)}">Zalo\u017Eit \xFA\u010Det</button></div>`;
+    back = `<button type="button" class="mini-link" data-o="go" data-s="${t ? "team" : "people"}" data-a="${esc2(tid)}">\u2039 Zp\u011Bt</button>`;
+  }
+  modal(`${back}${h}<p class="lg-err" id="o-err" role="alert" hidden></p><div class="btns"><button class="btn" data-o="close">Zav\u0159\xEDt</button></div>`, {});
+  $("#modal").onclick = (e) => orgClick(e, screen, arg);
+}
+async function orgClick(e, screen, arg) {
+  const g = e.target.closest("[data-gen]");
+  if (g) {
+    $("#" + g.dataset.gen).value = genPassword();
+    return;
+  }
+  const sg = e.target.closest(".seg button");
+  if (sg) {
+    sg.parentNode.querySelectorAll("button").forEach((x) => {
+      x.classList.toggle("on", x === sg);
+      x.setAttribute("aria-checked", String(x === sg));
+    });
+    return;
+  }
+  const b = e.target.closest("[data-o]");
+  if (!b || ORG.busy) return;
+  const o = b.dataset.o, a = b.dataset.a || null, api = ORG.api, d = ORG.d;
+  const err = (t) => {
+    const el = $("#o-err");
+    if (el) {
+      el.textContent = t;
+      el.hidden = !t;
+    }
+  };
+  if (o === "close") {
+    closeModal();
+    return;
+  }
+  if (o === "go") {
+    orgShow(b.dataset.s, a);
+    return;
+  }
+  if (o === "tgl" && !b.dataset.a) {
+    b.classList.toggle("on");
+    b.setAttribute("aria-checked", String(b.classList.contains("on")));
+    return;
+  }
+  if (o === "here") {
+    const c = map.getCenter();
+    $("#o-lat").value = c.lat.toFixed(5);
+    $("#o-lon").value = c.lng.toFixed(5);
+    $("#o-zoom").value = String(Math.round(map.getZoom()));
+    return;
+  }
+  if (o === "new-team") {
+    orgShow(o, a);
+    return;
+  }
+  if (o === "team-create") {
+    const n = oVal("o-name");
+    if (!n) return err("Vypl\u0148 n\xE1zev.");
+    return run(() => api.saveTeam({ city_id: a, name: n }), "teams", null, "T\xFDm vytvo\u0159en.");
+  }
+  if (o === "ms-pw") {
+    ORG.back = { screen, arg };
+    orgShow("pw", a);
+    return;
+  }
+  let job = null, next = screen, nextArg = arg, msg = "Ulo\u017Eeno.";
+  if (o === "save-city") {
+    const slugOf = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+    const v = { id: a, name: oVal("o-name"), slug: oVal("o-slug") || slugOf(oVal("o-name")), lat: parseFloat(oVal("o-lat").replace(",", ".")), lon: parseFloat(oVal("o-lon").replace(",", ".")), zoom: parseFloat(oVal("o-zoom")), radius_km: parseFloat(oVal("o-radius").replace(",", ".")), active: oOn("o-active") };
+    if (!v.name) return err("Vypl\u0148 n\xE1zev.");
+    if (!/^[a-z0-9-]{2,40}$/.test(v.slug)) return err("N\xE1zev mus\xED m\xEDt alespo\u0148 2 p\xEDsmena.");
+    if (!(Math.abs(v.lat) <= 90 && Math.abs(v.lon) <= 180) || Math.abs(v.lat) < 1e-6 && Math.abs(v.lon) < 1e-6) return err("Neplatn\xFD st\u0159ed m\u011Bsta.");
+    if (!(v.zoom >= 10 && v.zoom <= 19)) return err("P\u0159ibl\xED\u017Een\xED 10\u201319.");
+    if (!(v.radius_km > 0 && v.radius_km <= 100)) return err("Okruh 0\u2013100 km.");
+    job = () => api.saveCity(v);
+    next = "cities";
+  } else if (o === "save-team") {
+    const t = d.teams.find((x) => x.id === a), name = oVal("o-name");
+    if (!name) return err("Vypl\u0148 n\xE1zev.");
+    job = () => api.saveTeam({ id: a, city_id: t.city_id, name, active: oOn("o-active") });
+  } else if (o === "ms-role" || o === "ms-add" || o === "ms-active") {
+    const m = d.memberships.find((x) => x.team_id === arg && x.email === a);
+    if (!m) return;
+    const role = o === "ms-role" ? m.role === "manager" ? "member" : "manager" : m.role;
+    const can = o === "ms-add" ? !m.can_add_members : role === "manager" && m.can_add_members;
+    const act = o === "ms-active" ? !m.active : m.active;
+    job = () => api.setMembership(m.team_id, m.email, role, can, act);
+  } else if (o === "ms-new") {
+    const email = oVal("o-person");
+    if (!email) return err("Vyber \u010Dlov\u011Bka.");
+    job = () => api.setMembership(a, email, oSegVal("o-trole") || "member", false, true);
+    msg = "P\u0159id\xE1no do t\xFDmu.";
+  } else if (o === "pw-set") {
+    const pw = $("#o-pass").value;
+    if (pw.length < 8) return err("Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F (nebo klepni na \u201EVymyslet\u201C).");
+    ORG.busy = true;
+    try {
+      await api.setPassword(a, pw);
+      showCredentials(personName(a), a, pw, true);
+    } catch (x) {
+      err(orgErr(x));
+    } finally {
+      ORG.busy = false;
+    }
+    return;
+  } else if (o === "save-person") {
+    const p = d.people.find((x) => x.email === a), name = oVal("o-name");
+    if (!name) return err("Vypl\u0148 jm\xE9no.");
+    const self = a === (team.me && team.me.email);
+    const admin = self ? null : oOn("o-admin"), active = self ? null : oOn("o-active");
+    if (admin && p.role !== "admin" && !b.classList.contains("sure")) {
+      b.classList.add("sure");
+      b.textContent = "Opravdu ud\u011Blat centr\xE1ln\xEDm spr\xE1vcem?";
+      return;
+    }
+    job = () => api.setPerson(a, { name, admin, active });
+    next = "people";
+  } else if (o === "person-new" && !screen.startsWith("person-new")) {
+    orgShow("person-new", a);
+    return;
+  } else if (o === "person-create") {
+    const name = oVal("o-name"), email = oVal("o-email").toLowerCase(), pw = $("#o-pass").value, tid = $("#o-team") ? $("#o-team").value : a;
+    if (!name) return err("Vypl\u0148 jm\xE9no.");
+    if (!EMAIL_RE.test(email)) return err("Zadej platn\xFD e-mail.");
+    if (pw.length < 8) return err("Heslo mus\xED m\xEDt alespo\u0148 8 znak\u016F (nebo klepni na \u201EVymyslet\u201C).");
+    if (d.people.some((p) => p.email === email)) return err("Tento e-mail u\u017E \xFA\u010Det m\xE1 \u2013 p\u0159idej ho do t\xFDmu z nab\xEDdky \u201EExistuj\xEDc\xED \u010Dlov\u011Bk\u201C.");
+    ORG.busy = true;
+    b.disabled = true;
+    try {
+      await api.addPerson(email, name, pw, tid || null, oSegVal("o-trole") || "member");
+      showCredentials(name, email, pw);
+      contextChanged();
+      team.loadMembers().catch(() => {
+      });
+    } catch (x) {
+      err(orgErr(x));
+      b.disabled = false;
+    } finally {
+      ORG.busy = false;
+    }
+    return;
+  }
+  if (job) return run(job, next, nextArg, msg);
+  async function run(fn, s2, a2, okMsg) {
+    ORG.busy = true;
+    b.disabled = true;
+    try {
+      await fn();
+      ORG.d = await api.load();
+      orgShow(s2, a2);
+      toast(okMsg);
+      contextChanged();
+      team.loadMembers().catch(() => {
+      });
+    } catch (x) {
+      err(orgErr(x));
+      b.disabled = false;
+    } finally {
+      ORG.busy = false;
+    }
+  }
+}
 var teamStarting = false;
 async function startTeam() {
   const s = session;
@@ -4311,10 +4941,6 @@ async function startTeam() {
   }
 }
 async function startTeamInner(s) {
-  if (!store.remote) {
-    store.setRemote(new SupabaseRemote(sb));
-    store.sync();
-  }
   let mode;
   try {
     mode = await Promise.race([team.start(sb, s), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 12e3))]);
@@ -4326,11 +4952,133 @@ async function startTeamInner(s) {
   if (mode === "outsider") {
     store.setRemote(null);
     showOutsider();
+  } else if (mode === "member" && team.ctx) await applyContext("start");
+  else if ((mode === "member" || mode === "legacy") && !store.remote) {
+    if (store.scope) await switchScope(null, "legacy-db");
+    store.setRemote(new SupabaseRemote(sb));
+    store.sync();
   }
   renderSync();
   updateTeamChip();
   if (!state.sel) softRender();
   if (mode === "member") focusMates("open");
+}
+function scopeOptions() {
+  const out = [];
+  if (!team.ctx) return out;
+  for (const c of team.ctx.cities || []) {
+    if (c.active === false) continue;
+    for (const k of c.campaigns || []) out.push({ campaignId: k.id, cityId: c.id, legacy: !!k.legacy_ids, canWrite: !!k.can_write, status: k.status, campaignName: k.name, cityName: c.name, lat: Number(c.lat), lon: Number(c.lon), zoom: Number(c.zoom) || 16, radius: Number(c.radius_km) || 12, many: (c.campaigns || []).length > 1 });
+  }
+  return out;
+}
+var scopeLabel = (o) => o.many ? `${o.cityName} \xB7 ${o.campaignName}` : o.cityName;
+function pickScope(opts) {
+  const cur = store.scope && opts.find((o) => o.campaignId === store.scope.campaignId);
+  if (cur) return cur;
+  return opts.find((o) => o.canWrite && o.legacy) || opts.find((o) => o.canWrite) || opts[0] || null;
+}
+var ctxNotice = "";
+async function applyContext(why) {
+  const opts = scopeOptions(), next = pickScope(opts);
+  if (!next) {
+    store.setRemote(null);
+    await team.setCity(null);
+    if (ctxNotice !== "none") {
+      ctxNotice = "none";
+      toast("Tv\u016Fj t\xFDm zat\xEDm nem\xE1 p\u0159id\u011Blen\xE9 m\u011Bsto \u2013 evidence se ukl\xE1d\xE1 jen do za\u0159\xEDzen\xED.");
+    }
+    fillMuni();
+    renderSync();
+    return;
+  }
+  ctxNotice = "";
+  const lost = store.scope && store.scope.campaignId !== next.campaignId && why !== "start";
+  await switchScope(next, why);
+  if (lost) toast(`P\u0159\xEDstup k p\u0159edchoz\xEDmu m\u011Bstu byl zm\u011Bn\u011Bn \u2013 te\u010F pracuje\u0161 v: ${scopeLabel(next)}.`);
+  if (!next.canWrite) toast(`Roznos v ${next.cityName} je ukon\u010Den\xFD \u2013 jen pro \u010Dten\xED.`);
+}
+var switching = null;
+async function switchScope(sc, why, keepLocal) {
+  const prev = switching;
+  let done;
+  switching = new Promise((r) => done = r);
+  await prev;
+  try {
+    const same2 = sc && store.scope && store.scope.campaignId === sc.campaignId;
+    try {
+      if (sc) localStorage.setItem(SCOPEKEY, JSON.stringify(sc));
+      else localStorage.removeItem(SCOPEKEY);
+    } catch (e) {
+    }
+    if (same2) {
+      store.scope = sc;
+      const moved = CFG.center[0] !== sc.lat || CFG.center[1] !== sc.lon || CFG.radiusKm !== sc.radius;
+      homeFrom(sc);
+      placeHome();
+      if (moved) {
+        state.places = [];
+        loadPlaces();
+      }
+      if (!store.remote && sb && session) {
+        store.setRemote(new SupabaseRemote(sb, sc));
+        store.sync();
+      }
+      await team.setCity(sc.cityId);
+      fillMuni();
+      renderSync();
+      return;
+    }
+    if (!sc && !store.scope && keepLocal) return;
+    if (state.sel) select(null);
+    if (state.mode !== "browse") setMode("browse");
+    state.multi.clear();
+    const nextPersist = await persistFor(sc);
+    for (const id of [...B.keys()]) dropBuilding(id);
+    AUX.clear();
+    AUX_OF.clear();
+    ingested.clear();
+    for (const [id, l] of areaLayers) {
+      map.removeLayer(l);
+      areaLayers.delete(id);
+    }
+    const ok = await store.switchScope({ persist: nextPersist, remote: sc && sb && session ? new SupabaseRemote(sb, sc) : null, scope: sc });
+    if (!ok) return;
+    const cityMoved = !sc || !CFG.cityName || CFG.center[0] !== sc.lat || CFG.center[1] !== sc.lon;
+    homeFrom(sc);
+    placeHome();
+    for (const r of store.all("building_records")) {
+      const g = store.get("buildings", r.id);
+      if (g) addBuilding(fromStoreRow(g));
+    }
+    for (const a of store.all("areas")) drawArea(a.id);
+    if (cityMoved) {
+      state.places = [];
+      state.filter.muni = "";
+      const far = haversine(map.getCenter().lat, map.getCenter().lng, CFG.center[0], CFG.center[1]) > CFG.radiusKm * 1e3;
+      if (why !== "start" || far) map.setView(CFG.center, CFG.homeZoom, { animate: false });
+      loadPlaces();
+    }
+    fillMuni();
+    loadView();
+    renderLegend();
+    renderSync();
+    renderPanel();
+    if (store.remote) store.sync();
+    await team.setCity(sc ? sc.cityId : null);
+    updateTeamChip();
+  } finally {
+    done();
+  }
+}
+var ctxTimer = 0;
+function contextChanged() {
+  clearTimeout(ctxTimer);
+  ctxTimer = setTimeout(() => {
+    if (team.mode !== "member" || !team.ctx) return;
+    team.loadContext().then(() => applyContext("change")).catch(() => {
+    });
+  }, 1200);
 }
 var hiddenAt = 0;
 function focusMates(why) {
@@ -4370,6 +5118,7 @@ document.addEventListener("visibilitychange", () => {
     if (away > 5 * 6e4) focusMates("return");
   }).catch(() => {
   });
+  if (team.ctx) contextChanged();
 });
 function showOutsider() {
   if (!$("#modal").hidden) return;
@@ -4386,6 +5135,11 @@ function showOutsider() {
   );
 }
 function onTeam(what, id) {
+  if (what === "context-changed") {
+    contextChanged();
+    return;
+  }
+  if (what === "context") return;
   if (what === "live") updateTeamChip();
   if (what === "mate-join") toast(`${team.nameOf(id) || "Kolega"} pr\xE1v\u011B rozn\xE1\u0161\xED \u2013 vid\xED\u0161 ho na map\u011B.`);
   if (what === "mate-click") {
@@ -5149,6 +5903,19 @@ $("#panel-body").addEventListener("click", (e) => {
     case "sb-logout":
       logout();
       break;
+    case "rejected-drop":
+      confirmBox("Zahodit odm\xEDtnut\xE9 zm\u011Bny?", "Zm\u011Bny, kter\xE9 server odm\xEDtl, se odstran\xED z tohoto za\u0159\xEDzen\xED a vr\xE1t\xED se stav ze serveru.", "Zahodit", () => store.discardRejected().then((n) => {
+        restyleAll();
+        toast(`Zahozeno ${n} zm\u011Bn.`);
+        renderPanel();
+      }));
+      break;
+    case "scope-pick":
+      scopePicker();
+      break;
+    case "org-open":
+      orgOpen();
+      break;
     case "sb-sync":
       if (!navigator.onLine) toast("Jsi offline \u2013 zm\u011Bny se ode\u0161lou, a\u017E bude sign\xE1l.");
       store.sync().then(() => {
@@ -5417,7 +6184,9 @@ function importBackup(dump) {
     dump.tables[t] = rows.filter((r) => r && typeof r === "object" && typeof r.id === "string" && r.id && (!(t === "buildings" || t === "areas") || validGeom(r.geometry)) && (t !== "visits" || r.target_id && !isNaN(new Date(r.visited_at)))).map((r) => ({ ...r, flyers: r.flyers == null ? r.flyers : Math.max(-MAX_FLYERS, Math.min(MAX_FLYERS, Math.round(+r.flyers) || 0)) }));
   }
   const n = TABLES.reduce((s, t) => s + (dump.tables[t] || []).length, 0);
-  confirmBox("Obnovit ze z\xE1lohy?", `Z\xE1loha z ${fmtTime(dump.exported_at)} obsahuje ${n} \u0159\xE1dk\u016F. Z\xE1znamy se stejn\xFDm identifik\xE1torem se p\u0159ep\xED\u0161\xED stavem ze z\xE1lohy.`, "Obnovit", () => {
+  const other = dump.scope && dump.scope.campaign_id && (!store.scope || store.scope.campaignId !== dump.scope.campaign_id);
+  const where = store.scope ? ` do m\u011Bsta ${store.scope.cityName}` : "";
+  confirmBox("Obnovit ze z\xE1lohy?", `Z\xE1loha z ${fmtTime(dump.exported_at)} obsahuje ${n} \u0159\xE1dk\u016F${other ? ` a je z m\u011Bsta ${dump.scope.city || "?"}` : ""}. Obnov\xED se${where}. Z\xE1znamy se stejn\xFDm identifik\xE1torem se p\u0159ep\xED\u0161\xED stavem ze z\xE1lohy.`, "Obnovit", () => {
     const k = store.importAll(dump);
     for (const r of store.all("building_records")) if (!B.has(r.id)) {
       const g = store.get("buildings", r.id);
@@ -5455,7 +6224,7 @@ function csvVisits() {
   }
   return rows.join("\r\n");
 }
-var SYNC_LABEL = { local: volatile ? "Neukl\xE1d\xE1 se!" : "Jen v tomto za\u0159\xEDzen\xED", synced: "Synchronizov\xE1no", syncing: "Prob\xEDh\xE1 synchronizace", pending: "\u010Cek\xE1 na synchronizaci", offline: "Offline", error: "Chyba synchronizace", conflict: "Konflikt \u2013 vy\u0159e\u0161it", login: "Nep\u0159ihl\xE1\u0161en", outsider: "\u010Cek\xE1 na p\u0159id\xE1n\xED do t\xFDmu" };
+var SYNC_LABEL = { local: volatile ? "Neukl\xE1d\xE1 se!" : "Jen v tomto za\u0159\xEDzen\xED", synced: "Synchronizov\xE1no", syncing: "Prob\xEDh\xE1 synchronizace", pending: "\u010Cek\xE1 na synchronizaci", offline: "Offline", error: "Chyba synchronizace", conflict: "Konflikt \u2013 vy\u0159e\u0161it", rejected: "Server zm\u011Bny odm\xEDtl", login: "Nep\u0159ihl\xE1\u0161en", outsider: "\u010Cek\xE1 na p\u0159id\xE1n\xED do t\xFDmu" };
 var SYNC_SHORT = { outsider: "Mimo t\xFDm", synced: "Ulo\u017Eeno", syncing: "Ukl\xE1d\xE1m", pending: "\u010Cek\xE1", offline: "Offline", error: "Chyba", conflict: "Konflikt" };
 function renderSync() {
   const s = sb && !session ? "login" : session && team.mode === "outsider" ? "outsider" : store.state;
@@ -5780,7 +6549,18 @@ function showConflict() {
     }, x: closeModal }
   );
 }
+var rejectedToast = 0;
 store.on((ev) => {
+  if (ev.type === "rejected") {
+    renderSync();
+    if (Date.now() - rejectedToast > 3e4) {
+      rejectedToast = Date.now();
+      toast("Server zm\u011Bnu odm\xEDtl \u2013 v tomto m\u011Bst\u011B nem\xE1\u0161 opr\xE1vn\u011Bn\xED zapisovat. Zm\u011Bna z\u016Fst\xE1v\xE1 jen v za\u0159\xEDzen\xED (Nastaven\xED \u2192 \xDA\u010Det).");
+    }
+    contextChanged();
+    return;
+  }
+  if (ev.type === "reset") return;
   if (ev.type === "persist-error") {
     toast("Pozor: zm\u011Bnu se nepoda\u0159ilo ulo\u017Eit do za\u0159\xEDzen\xED (pln\xE9 \xFAlo\u017Ei\u0161t\u011B?). Ud\u011Blej z\xE1lohu v z\xE1lo\u017Ece Data.");
     return;
@@ -5872,6 +6652,7 @@ setInterval(() => {
   if (team.sharing && GEO.watch != null && GEO.fix && prefs.shareLoc !== false) team.share(GEO.fix, GEO.heading);
   if (team.mode === "member" && ++liveTick % 6 === 0) team.loadLive().catch(() => {
   });
+  if (team.ctx && liveTick % 30 === 0) contextChanged();
   updateTeamChip();
 }, 1e4);
 var liveTick = 0;
@@ -5927,16 +6708,25 @@ for (const a of store.all("areas")) drawArea(a.id);
 renderLegend();
 renderSync();
 renderPanel();
+fillMuni();
 if (volatile) modal('<h2>Data se v tomto prohl\xED\u017Ee\u010Di neulo\u017E\xED</h2><p>Prohl\xED\u017Ee\u010D nedovolil trval\xE9 \xFAlo\u017Ei\u0161t\u011B (typicky anonymn\xED okno). Po zav\u0159en\xED str\xE1nky evidence zmiz\xED. Otev\u0159i aplikaci v b\u011B\u017En\xE9m okn\u011B, nebo se p\u0159ihlas k synchronizaci v z\xE1lo\u017Ece Data.</p><div class="btns"><button class="btn pri" data-m="x">Rozum\xEDm</button></div>', { x: closeModal });
 loadView();
 initSupabase();
 function fillMuni() {
-  const sel = $("#muni-select"), cur = sel.value;
-  const names = state.places.map((p) => p.name).filter((n) => n !== "Dob\u0159\xED\u0161");
-  sel.innerHTML = `<option value="">Dob\u0159\xED\u0161</option>` + names.map((n) => `<option>${esc2(n)}</option>`).join("");
+  const sel = $("#muni-select"), cur = sel.value, city = CFG.cityName || "Dob\u0159\xED\u0161";
+  const names = state.places.map((p) => p.name).filter((n) => n !== city);
+  const others = scopeOptions().filter((o) => !store.scope || o.campaignId !== store.scope.campaignId);
+  const cur0 = store.scope && store.scope.many ? `${city} \xB7 ${store.scope.campaignName}` : city;
+  sel.innerHTML = `<option value="">${esc2(cur0)}</option>` + (others.length ? `<optgroup label="P\u0159epnout m\u011Bsto">${others.map((o) => `<option value="@${esc2(o.campaignId)}">${esc2(scopeLabel(o))}${o.canWrite ? "" : " (jen \u010Dten\xED)"}</option>`).join("")}</optgroup>` : "") + (names.length && others.length ? `<optgroup label="Obce v okol\xED">` : "") + names.map((n) => `<option>${esc2(n)}</option>`).join("") + (names.length && others.length ? "</optgroup>" : "");
   sel.value = names.includes(cur) ? cur : "";
 }
 $("#muni-select").addEventListener("change", (e) => {
+  if (e.target.value.startsWith("@")) {
+    const o = scopeOptions().find((x) => x.campaignId === e.target.value.slice(1));
+    e.target.value = "";
+    if (o) switchScope(o, "user").then(() => toast(`Te\u010F pracuje\u0161 v: ${scopeLabel(o)}${o.canWrite ? "" : " (jen pro \u010Dten\xED)"}.`));
+    return;
+  }
   const p = state.places.find((x) => x.name === e.target.value);
   if (p) map.setView([p.lat, p.lon], 16);
   else map.setView(CFG.center, CFG.homeZoom);
@@ -5975,6 +6765,9 @@ window.addEventListener("resize", () => {
 });
 window.__rzt = { store, map, B, state, overpass, prefs, team, geo: () => ({ fix: GEO.fix, target: GEO.target, shown: GEO.shown, follow: GEO.follow, watch: GEO.watch, raf: GEO.raf, heading: GEO.heading }), openTab: (t) => {
   if (state.tab !== t) openSection(t);
+}, switchTo: (id) => {
+  const o = scopeOptions().find((x) => x.campaignId === id);
+  return o ? switchScope(o, "user") : Promise.resolve(false);
 } };
 </script>
 </body>
